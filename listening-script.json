@@ -1,0 +1,206 @@
+{
+  "sections": [
+    [
+      [
+        {
+          "text": "她在喝水。",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "这是一只猫。",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "桌子上有五个苹果。",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "他在睡觉。",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "书在桌子上。",
+          "role": "female"
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "text": "你叫什么名字？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "这本书多少钱？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "你是哪国人？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "你家有几口人？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "你喜欢喝茶吗？",
+          "role": "female"
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "text": "今天下雨了吗？",
+          "role": "male"
+        },
+        {
+          "text": "下雨了，你看！",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "你在哪儿工作？",
+          "role": "male"
+        },
+        {
+          "text": "我在医院工作，我是医生。",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "你在做什么？",
+          "role": "female"
+        },
+        {
+          "text": "我在给妈妈打电话。",
+          "role": "male"
+        }
+      ],
+      [
+        {
+          "text": "你怎么去北京？",
+          "role": "female"
+        },
+        {
+          "text": "我坐火车去。",
+          "role": "male"
+        }
+      ],
+      [
+        {
+          "text": "妈妈在做什么？",
+          "role": "male"
+        },
+        {
+          "text": "她在做饭。",
+          "role": "female"
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "text": "我每天早上七点起床。",
+          "role": "male"
+        },
+        {
+          "text": "他每天几点起床？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "小王是我的朋友，他今年二十岁。",
+          "role": "male"
+        },
+        {
+          "text": "小王今年多大？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "我不喝咖啡，我想喝水。",
+          "role": "male"
+        },
+        {
+          "text": "他想喝什么？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "今天是星期六，明天我去看妈妈。",
+          "role": "male"
+        },
+        {
+          "text": "他哪天去看妈妈？",
+          "role": "female"
+        }
+      ],
+      [
+        {
+          "text": "我的书在桌子上，手机在椅子上。",
+          "role": "male"
+        },
+        {
+          "text": "他的手机在哪儿？",
+          "role": "female"
+        }
+      ]
+    ]
+  ],
+  "examples": {
+    "1": [
+      {
+        "text": "她在看书。",
+        "role": "female"
+      }
+    ],
+    "2": [
+      {
+        "text": "你好吗？",
+        "role": "female"
+      }
+    ],
+    "3": [
+      {
+        "text": "你在做什么？",
+        "role": "female"
+      },
+      {
+        "text": "我在喝茶。",
+        "role": "male"
+      }
+    ],
+    "4": [
+      {
+        "text": "我今年十岁。",
+        "role": "male"
+      },
+      {
+        "text": "他今年多大？",
+        "role": "female"
+      }
+    ]
+  }
+}
