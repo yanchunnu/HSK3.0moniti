@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 import hashlib
 import re
 from io import BytesIO
@@ -7,6 +8,10 @@ from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import pypdfium2 as pdfium
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--problem-only', action='store_true')
+args = parser.parse_args()
 
 out = Path('output')
 work = Path('tmp/pdfs')
@@ -46,6 +51,21 @@ for overlay, clips in zip(overlay_reader.pages, plans):
 writer.add_metadata({'/Title': 'HSK 3.0 1급 제01회 문제지'})
 problem = out / (stem + '문제지.pdf')
 writer.write(problem)
+
+p = PdfReader(problem)
+assert len(p.pages) == 12
+for page in p.pages:
+    flat = ''.join(page.extract_text().split())
+    assert not re.search(r'사진[:：]?AI생성|答题卡|답안카드|한국어해설',flat)
+assert not p.get_fields()
+
+preview = out / 'preview'
+with pdfium.PdfDocument(problem) as doc:
+    for i, page in enumerate(doc, 1):
+        page.render(scale=2.2).to_pil().save(preview / f'문제지-{i:02}.png')
+if args.problem_only:
+    assert all(hashlib.sha256(p.read_bytes()).digest()==digest for p,digest in original_hashes.items())
+    raise SystemExit
 
 key_text = source.pages[9].extract_text().replace('\n','')
 keys = re.findall(r'第[一二三四]部分([A-F]{5})', key_text)
@@ -121,12 +141,6 @@ for page_idx in range(2):
     a.showPage()
 a.save()
 
-p = PdfReader(problem)
-assert len(p.pages) == 12
-for page in p.pages:
-    flat = ''.join(page.extract_text().split())
-    assert not re.search(r'사진[:：]?AI생성|答题卡|답안카드|한국어해설',flat)
-assert not p.get_fields()
 q = PdfReader(answer_path)
 assert len(q.pages) == 3
 answers = re.findall(r'(\d+)\s+([A-F])',q.pages[0].extract_text())
@@ -143,11 +157,9 @@ for i, page in enumerate(q.pages[1:]):
     assert not re.search(r'[A-Za-zÀ-ž\uac00-\ud7af]', '\n'.join(extracted.splitlines()[1:]))
 assert all(hashlib.sha256(p.read_bytes()).digest()==digest for p,digest in original_hashes.items())
 
-preview = out / 'preview'
-for path, label in [(problem,'문제지'),(answer_path,'정답및해설')]:
-    doc = pdfium.PdfDocument(path)
+with pdfium.PdfDocument(answer_path) as doc:
     for i,page in enumerate(doc,1):
-        page.render(scale=2.2).to_pil().save(preview / f'{label}-{i:02}.png')
+        page.render(scale=2.2).to_pil().save(preview / f'정답및해설-{i:02}.png')
 
 def sheet(files, name, cols, thumb):
     rows = (len(files)+cols-1)//cols

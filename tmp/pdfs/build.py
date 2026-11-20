@@ -53,7 +53,7 @@ def number(x,y,n):
 def crop(n,box,x,y,k=1):
     plans[-1].append((n,box,x,y,k))
 
-def begin(title='',part='',first=None,qr=None,continuation=False):
+def begin(title='',part='',first=None,continuation=False):
     global page_no
     page_no += 1
     plans.append([])
@@ -67,8 +67,6 @@ def begin(title='',part='',first=None,qr=None,continuation=False):
         text(191,83 if title else 65,part,13,center=True)
     if first:
         text(32,101 if title else 91,f'第{first}–{first+4}题' + ('（续）' if continuation else ''),11)
-    if qr:
-        crop(qr,(309,33,354,87),313,40,.9)
     line(27,509,355,509)
     text(191,525,str(page_no),8,'Latin',center=True)
 
@@ -118,8 +116,9 @@ text(40,469,'QR 음원을 재생하면 번호가 있는 문항부터 풀이하�
 end()
 
 # Listening 1 - five source rows plus an illustrated example.
-begin('一、听力',parts[0],1,qr=2)
-text(32,117,'听录音，选择正确的图片。',9)
+begin('一、听力',parts[0],1)
+text(32,114,'听录音，选择正确的图片。',9)
+text(32,126,'例句：这是一把伞。',9)
 text(350,117,'사진 AI 생성',7,'KR',center=True)
 xs=[30,67,161,255,352]
 ys=[129+i*58 for i in range(7)]
@@ -150,13 +149,13 @@ for i in range(5):
     number(43,y+31,1+i)
     for j,(a,b) in enumerate([(62,139),(165,244),(270,348)]):
         top=98+i*79
-        crop(2,(a,top,b,top+66),87+94*j,y+3,.69)
-        text(114+94*j,y+54,'ABC'[j],8,'Latin',center=True)
-text(32,492,'例句：这是一把伞。',9)
+        crop(2,(a,top,b,top+66),87+94*j,y+1.3,.69)
+        # Allow about 5 pt between the image and the top of the label.
+        text(114+94*j,y+55.7,'ABC'[j],8,'Latin',center=True)
 end()
 
 # Listening 2
-begin(part=parts[1],first=6,qr=3)
+begin(part=parts[1],first=6)
 text(32,109,'听问题，选择正确的回答。',9)
 text(32,140,'例如',9)
 pair(62,130,'你想喝什么？','Nǐ xiǎng hē shénme?')
@@ -165,7 +164,7 @@ options(3,[226,281,336,391,446],6)
 end()
 
 # Listening 3
-begin(part=parts[2],first=11,qr=4)
+begin(part=parts[2],first=11)
 text(32,108,'听对话，选择相应的图片。',9)
 listen_images=[(47,114,137,203),(152,114,243,203),(258,114,350,203),
                (47,222,137,313),(152,222,243,313),(258,222,350,313)]
