@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 import pymupdf as fitz
 import zxingcpp
 
-from booklet import answers, PAGE_RANGES, PARTS
+from booklet import answers, BODY_SIZE, PINYIN_SIZE, PAGE_RANGES, PARTS
 
 def render(page,matrix=fitz.Matrix(1.5,1.5)):
     pix=page.get_pixmap(matrix=matrix)
@@ -35,7 +35,7 @@ def main():
           fitz.open(Path('output')/(stem+'정답및해설.pdf')) as solution):
         keys,scripts=answers(source)
         assert len(question)==16
-        assert Path(question.name).stat().st_size<=5_000_000
+        assert all(Path(pdf.name).stat().st_size<=5_000_000 for pdf in (question,solution))
         answer_text=solution[0].get_text()
         for i,answer in keys.items():
             assert re.search(rf'(?m)^{i:02}\s+{re.escape(answer)}\s*$',answer_text),(i,answer)
@@ -58,12 +58,42 @@ def main():
             text=compact(page.get_text())
             assert not any(item in text for item in ('사진AI생성','한국어해설','답안기록지'))
         for p,(first,last) in enumerate(PAGE_RANGES,1):
-            result=question[p+1 if p<=5 else p+2].get_text()
+            if p==10:
+                last=47
+            elif p==11:
+                first=48
+            page=question[p+1 if p<=5 else p+2]
+            result=page.get_text()
             assert re.findall(r'(?m)^0?(\d{1,2})\.(?=\s|$)',result)==[str(i) for i in range(first,last+1)], (p,result)
-            if p>=4 and p!=6:
-                original=source[p].get_text(clip=fitz.Rect(37,149,558,788))
-                omitted=Counter(original.split())-Counter(result.split())
-                assert not omitted,(p,omitted)
+            if p>=4:
+                for block in page.get_text('dict',flags=fitz.TEXTFLAGS_TEXT)['blocks']:
+                    for line in block['lines']:
+                        for span in line['spans']:
+                            if span['origin'][1] < 188 or span['text']=='例':
+                                continue
+                            size = span['size']/(841.89/540)
+                            if span['font']=='SimHei' and re.search(r'[\u3400-\u9fff]',span['text']):
+                                assert abs(size-BODY_SIZE)<.02, (p,span)
+                            elif span['font']=='ArialMT' and re.search(r'[a-zÀ-ž]',span['text']):
+                                assert abs(size-PINYIN_SIZE)<.02, (p,span)
+        def item_text(pages):
+            text = '\n'.join(pages)
+            parts = re.split(r'(?m)^(\d{2})\.\s*',text)
+            return {int(n): Counter(compact(body)) for n,body in zip(parts[1::2],parts[2::2])}
+
+        original = item_text(source[i].get_text(clip=fitz.Rect(37,149,558,788))
+                             for i in (10,11))
+        result = item_text(question[i].get_text(clip=fitz.Rect(37,310 if i==12 else 185,558,790))
+                           for i in (12,13))
+        assert original.keys()==result.keys()==set(range(46,51))
+        for n in original:
+            assert original[n]==result[n], (n,original[n]-result[n],result[n]-original[n])
+        for p in (4,5,6,7,8,9,12,13):
+            start = 442 if p==6 else 149
+            original = source[p].get_text(clip=fitz.Rect(37,start,558,788))
+            result = question[p+1 if p<=5 else p+2].get_text()
+            omitted = Counter(compact(original))-Counter(compact(result))
+            assert not omitted,(p,omitted)
         sheet([render(page) for page in solution],Path(f'tmp/answers{n:02}.jpg'))
         print('60 source answers, 25 transcripts, 60 question numbers, source text, cover QR and links verified')
 
