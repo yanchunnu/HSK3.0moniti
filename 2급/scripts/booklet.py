@@ -1,14 +1,19 @@
-"""Build one HSK 2 sample booklet and answer booklet from the numbered source."""
+"""Build one HSK 2 sample booklet and answer booklet from the numbered source.
+
+The writing section uses pypinyin to split the source's joined pinyin.
+"""
 import argparse
 import json
 from itertools import chain
 from pathlib import Path
 import re
+import unicodedata
 from io import BytesIO
 
 from PIL import Image
 import pymupdf as fitz
 from pypdf import PdfReader
+from pypinyin import Style, pinyin
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -195,18 +200,56 @@ def source_cells(page, start=149, stop=788, blanks=()):
         yield groups
         ruby = []
 
-def draw_cells(layout,x,y,cells,right):
+def writing_syllables(word, ruby):
+    """Split the printed pinyin at the answer's character boundaries."""
+    def plain(value):
+        return ''.join(char for char in unicodedata.normalize('NFD',value.lower())
+                       if char not in '\u0300\u0301\u0304\u030c')
+
+    remaining = ruby
+    syllables = []
+    for spellings in pinyin(word,style=Style.NORMAL,heteronym=True,v_to_u=True):
+        normalized = {plain(spelling) for spelling in spellings}
+        for width in sorted({len(spelling) for spelling in spellings},reverse=True):
+            chunk = remaining[:width]
+            if plain(chunk) in normalized:
+                remaining = remaining[width:]
+                if remaining.startswith(("'",'’')):
+                    chunk += remaining[0]
+                    remaining = remaining[1:]
+                syllables.append(chunk)
+                remaining = remaining.lstrip()
+                break
+        else:
+            raise ValueError(f'Cannot align {ruby!r} with {word!r}')
+    if remaining:
+        raise ValueError(f'Extra pinyin in {ruby!r} for {word!r}')
+    return syllables
+
+def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False):
     """Fit paired syllables and characters together, wrapping at cell boundaries."""
     left = x
     for han,py in cells:
+        if han == '____':
+            syllables = writing_syllables(writing_answer,py)
+            size, gap = 18, 3
+            width = max(size+gap,*(pdfmetrics.stringWidth(s,'Latin',PINYIN_SIZE)+gap
+                                   for s in syllables))
+            if x+width*len(syllables) > right:
+                x,y = left,y+ROW_STEP
+            for char,syllable in zip(writing_answer,syllables):
+                center = x+width/2
+                layout.box(center-size/2,y-12,size,size)
+                layout.text(center,y-15,syllable,PINYIN_SIZE,'Latin',True,'#4e5e70')
+                if show_answer:
+                    layout.text(center,y+1,char,BODY_SIZE,center=True)
+                x += width
+            continue
         width = max(pdfmetrics.stringWidth(han,'CN',BODY_SIZE),
                     pdfmetrics.stringWidth(py,'Latin',PINYIN_SIZE)+2)
         if x+width > right:
             x,y = left,y+ROW_STEP
-        if han == '____':
-            layout.line(x,y+2,x+width-2,y+2)
-        else:
-            layout.text(x+width/2,y,han,BODY_SIZE,center=True)
+        layout.text(x+width/2,y,han,BODY_SIZE,center=True)
         if py:
             layout.text(x+width/2,y-RUBY_OFFSET,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
         x += width
@@ -229,8 +272,11 @@ def draw_groups(layout,y,groups,answer_box=False):
 
 def draw_components(layout,page,y):
     rows = source_rows(page)
-    for offset in range(0,len(rows),7):
-        (_,hint),(baseline,number),(_,ruby),*diagram = rows[offset:offset+7]
+    starts = [i-1 for i,(_,row) in enumerate(rows)
+              if len(row)==1 and re.fullmatch(r'5[1-5]\.',row[0]['text'])]
+    assert len(starts)==5, (page.number,starts)
+    for start,stop in zip(starts,starts[1:]+[len(rows)]):
+        (_,hint),(baseline,number),(_,ruby),*diagram = rows[start:stop]
         spans = [span for _,row in diagram for span in row if span['text'].strip()]
         choices = sorted((span for span in spans if 170 < span['origin'][0] < 400),
                          key=lambda span: span['origin'][0])
@@ -446,10 +492,8 @@ def booklet(source,raw,keys,set_number,output,examples):
                 draw_components(layout,source[page],177)
             elif page==13:
                 t(32,146,'例',NUMBER_SIZE)
-                draw_cells(layout,62,146,[('____','xuéxiào'),*zip('离我家很近。','lí wǒ jiā hěn jìn'.split()+[''])],352)
-                for index,char in enumerate('学校'):
-                    layout.box(62+19*index,152,18,18)
-                    t(71+19*index,165,char,BODY_SIZE,center=True)
+                draw_cells(layout,62,146,[('____','xuéxiào'),*zip('离我家很近。','lí wǒ jiā hěn jìn'.split()+[''])],
+                           352,writing_answer='学校',show_answer=True)
                 y=195
             if page in (4,5,7,8,9,10,11,13):
                 start = {7:235,8:377}.get(page,149)
@@ -462,13 +506,14 @@ def booklet(source,raw,keys,set_number,output,examples):
                     rows = preceding[:split] if page==10 else chain(preceding[split:],rows)
                 for groups in rows:
                     label = groups[0][0]
-                    y = draw_groups(layout,y,groups,answer_box=page in (8,9) and label.endswith('.'))
-                    assert y < 500, (page,y,groups)
                     if page==13:
-                        for i in range(2):
-                            layout.box(62+i*20,y+6,18,18)
+                        t(32,y,label,NUMBER_SIZE,'Latin')
+                        y = draw_cells(layout,62,y,groups[0][1],352,writing_answer=keys[int(label[:-1])])
+                        assert y+6 < 500, (page,y,groups)
                         y += 55
                     else:
+                        y = draw_groups(layout,y,groups,answer_box=page in (8,9) and label.endswith('.'))
+                        assert y < 500, (page,y,groups)
                         y += ROW_STEP
                         if len(groups)==3 and page in (4,5,10,11):
                             y += 7
