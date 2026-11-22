@@ -19,6 +19,7 @@ import zxingcpp
 
 PARTS = ('第一部分','第二部分','第三部分','第四部分')
 NAMES = '一二三四五六七八九十'
+LISTENING1_EXAMPLE = '这是一辆自行车。'
 EXAMPLE3 = ['甲：你今天怎么来学校？','乙：我坐公共汽车来的。','问：他怎么来学校？']
 SAMPLE_EXAMPLES = {
     'listening2': ['甲：你在这儿等什么？','乙：我在等公共汽车。'],
@@ -154,6 +155,42 @@ class Layout:
 def body_clip(source,page,top=149,bottom=788):
     return fitz.Rect(37,top,558,bottom)
 
+def draw_listening1_example(layout):
+    c = layout.c
+    c.saveState()
+    c.setStrokeColor('#38506b')
+    c.setLineWidth(1.3)
+
+    # A: clock
+    c.circle(114,375,13,stroke=1,fill=0)
+    c.line(114,375,114,383)
+    c.line(114,375,121,375)
+
+    # B: bicycle
+    c.circle(195,370,8,stroke=1,fill=0)
+    c.circle(223,370,8,stroke=1,fill=0)
+    frame = c.beginPath()
+    frame.moveTo(195,370)
+    frame.lineTo(202,382)
+    frame.lineTo(218,382)
+    frame.lineTo(207,370)
+    frame.close()
+    c.drawPath(frame)
+    c.line(207,370,201,386)
+    c.line(197,386,205,386)
+    c.line(223,370,216,388)
+    c.line(216,388,221,388)
+
+    # C: mobile phone
+    c.roundRect(294,362,20,27,3,stroke=1,fill=0)
+    c.rect(297,369,14,16,stroke=1,fill=0)
+    c.line(302,365,306,365)
+    c.restoreState()
+
+    for x,label in zip((114,209,304),'ABC'):
+        layout.text(x,192,label,8,'Latin',True)
+    layout.mark(225,188)
+
 def booklet(source,raw,keys,set_number,output,examples):
     layout = Layout(set_number)
     t,ln = layout.text,layout.line
@@ -203,32 +240,14 @@ def booklet(source,raw,keys,set_number,output,examples):
                      PARTS[part],(first,last))
         if page == 1:
             t(32,119,'听一句话，选择正确图片。',9)
-            t(32,131,'例句：这是一把伞。',9)
+            t(32,131,'例句：'+LISTENING1_EXAMPLE,9)
             xs = [30,67,162,257,352]
             for x in xs:
                 ln(x,137,x,497)
             for y in range(137,498,60):
                 ln(xs[0],y,xs[-1],y)
             t(39,168,'例',9)
-            for col,word in enumerate(['书','杯子','伞']):
-                x=114+95*col
-                c=layout.c
-                c.setStrokeColor('#38506b')
-                c.setLineWidth(1.3)
-                if word=='书':
-                    c.roundRect(x-14,540-181,28,27,2,stroke=1,fill=0)
-                    ln(x-7,154,x-7,181)
-                    ln(x-3,162,x+8,162)
-                elif word=='杯子':
-                    c.roundRect(x-12,540-181,23,25,3,stroke=1,fill=0)
-                    c.arc(x+7,540-177,x+23,540-159,-90,180)
-                else:
-                    c.arc(x-18,540-174,x+18,540-151,0,180)
-                    ln(x-18,162,x+18,162)
-                    ln(x,151,x,179)
-                    c.arc(x-7,540-183,x,540-175,180,180)
-                    layout.mark(x+16,188)
-                t(x,192,'ABC'[col],8,'Latin',True)
+            draw_listening1_example(layout)
             boxes = list(photos(raw,page))
             assert len(boxes)==15
             for i,clip in enumerate(boxes):
@@ -370,7 +389,7 @@ def answer_booklet(keys,scripts,set_number,path,examples):
         y=116
         for n in numbers:
             if n==0:
-                lines=['这是一把伞。']
+                lines=[LISTENING1_EXAMPLE]
             elif n==-1:
                 lines=examples['listening2'] if part==0 else EXAMPLE3
                 if part==0:

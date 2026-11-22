@@ -124,7 +124,8 @@ def main():
     parser.add_argument('--model',type=Path,required=True)
     args=parser.parse_args()
     stem=f'HSK3.0_2급_제{args.set_number:02}회_'
-    intro,parts,end=exam(args.set_number,parse(Path('output')/(stem+'정답및해설.pdf')))
+    blocks=parse(Path('output')/(stem+'정답및해설.pdf'))
+    intro,parts,end=exam(args.set_number,blocks)
     full=[*intro,*sum(parts,[]),*end]
     clips={key:trim(path) for key,path in asyncio.run(synthesize(full,Path('tmp/tts'))).items()}
     out=Path('output/audio')
@@ -145,7 +146,8 @@ def main():
                 original=clips[v,t]
                 correlation=np.corrcoef(segment.astype(float),original.astype(float))[0,1]
                 assert correlation>.93,(label,t,correlation)
-                if (v,t) not in decoded_cache:
+                # Verify the two encoded copies of the first example independently.
+                if t in blocks[-1] or (v,t) not in decoded_cache:
                     decoded_cache[v,t]=recognize(asr,samples[max(0,a-1600):b+2000])
                 heard=decoded_cache[v,t]
                 match=normal(heard)==normal(t)
