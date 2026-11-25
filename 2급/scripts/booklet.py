@@ -4,7 +4,6 @@ The writing section uses pypinyin to split the source's joined pinyin.
 """
 import argparse
 import json
-from itertools import chain
 from pathlib import Path
 import re
 import unicodedata
@@ -14,6 +13,7 @@ from PIL import Image
 import pymupdf as fitz
 from pypdf import PdfReader
 from pypinyin import Style, pinyin
+from pypinyin.seg.mmseg import seg
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -41,8 +41,19 @@ NUMBER_SIZE = 9
 RUBY_OFFSET = 11
 ROW_STEP = 24
 HAN = r'[\u3400-\u9fff]'
+# The pinyin phrase dictionary omits some compounds whose readings are unambiguous.
+COMMON_WORDS = re.compile(r'(昨天|今天|明天|后天|每天|七点半|出门|起床|学校|'
+                          r'喜欢|准备|饭馆|经常|周末|上课|学习|星期[一二三四五六日天]|'
+                          r'汉语|医生|学生|老师|朋友|什么|怎么|时候|公共汽车)')
 PAGE_RANGES = [(1,5),(6,10),(11,15),(16,20),(21,25),(26,30),(31,35),
                (36,40),(41,45),(46,48),(49,50),(51,55),(56,60)]
+SECTION_HEADERS = {2: ((6,15),False), 3: ((6,15),True),
+                   4: ((16,25),False), 5: ((16,25),True),
+                   8: ((36,45),False), 9: ((36,45),True)}
+
+def range_title(question_range,continued=False):
+    first,last = question_range
+    return f'第{first} - {last}题' + ('（续）' if continued else '')
 
 def answers(source):
     page = source[15].get_text()
@@ -110,7 +121,7 @@ class Layout:
         self.c.line(x,540-y,x+3,540-y-3)
         self.c.line(x+3,540-y-3,x+9,540-y+4)
 
-    def begin(self,title='',part='',question_range=None,subheader=None,cover=False):
+    def begin(self,title='',part='',question_range=None,subheader=None,cover=False,continued=False):
         self.pages += 1
         self.c.saveState()
         self.c.scale(595.276/382,841.89/540)
@@ -126,8 +137,7 @@ class Layout:
         if part:
             self.text(191,89 if title else 65,part,13,center=True)
         if question_range:
-            first,last = question_range
-            self.text(32,106 if title else 91,f'第{first}–{last}题' if first!=last else f'第{first}题',10)
+            self.text(32,106 if title else 91,range_title(question_range,continued),10)
         self.line(27,509,355,509)
         self.text(191,525,str(self.pages if subheader else self.pages-1),8,'Latin',True)
 
@@ -136,7 +146,8 @@ class Layout:
         self.c.showPage()
 
     def pair(self,x,y,han,py):
-        self.text(x,y-RUBY_OFFSET,py,PINYIN_SIZE,'Latin',color='#4e5e70')
+        center = x+pdfmetrics.stringWidth(han,'CN',BODY_SIZE)/2
+        self.text(center,y-RUBY_OFFSET,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
         self.text(x,y,han,BODY_SIZE)
 
     def image(self,source,page,clip,x,y,w,h):
@@ -226,49 +237,84 @@ def writing_syllables(word, ruby):
         raise ValueError(f'Extra pinyin in {ruby!r} for {word!r}')
     return syllables
 
-def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False):
-    """Fit paired syllables and characters together, wrapping at cell boundaries."""
-    left = x
+def ruby_words(cells):
+    """Group source syllables by word without changing source spelling or tones."""
+    run = []
     for han,py in cells:
+        if py and re.fullmatch(HAN+r'[，。？！、：；]*',han):
+            run.append((han,py))
+            if len(han)==1:
+                continue
+            yield from segment_ruby(run)
+            run.clear()
+        else:
+            yield from segment_ruby(run)
+            run.clear()
+            yield han,py
+    yield from segment_ruby(run)
+
+def segment_ruby(run):
+    text = ''.join(han[0] for han,_ in run)
+    words = []
+    for index,part in enumerate(COMMON_WORDS.split(text)):
+        if index%2:
+            words.append(part)
+        else:
+            words.extend(seg.cut(part))
+    offset = 0
+    for word in words:
+        end = offset+len(word)
+        cells = run[offset:end]
+        yield ''.join(han for han,_ in cells),' '.join(py for _,py in cells)
+        offset = end
+
+def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=ROW_STEP):
+    """Keep the Han in each word together and reserve space between words for ruby."""
+    left = x
+    ruby_offset = 15 if writing_answer else RUBY_OFFSET
+    for han,py in ruby_words(cells):
         if han == '____':
             syllables = writing_syllables(writing_answer,py)
             size, gap = 18, 3
             width = max(size+gap,*(pdfmetrics.stringWidth(s,'Latin',PINYIN_SIZE)+gap
                                    for s in syllables))
             if x+width*len(syllables) > right:
-                x,y = left,y+ROW_STEP
+                x,y = left,y+step
             for char,syllable in zip(writing_answer,syllables):
                 center = x+width/2
                 layout.box(center-size/2,y-12,size,size)
-                layout.text(center,y-15,syllable,PINYIN_SIZE,'Latin',True,'#4e5e70')
+                layout.text(center,y-ruby_offset,syllable,PINYIN_SIZE,'Latin',True,'#4e5e70')
                 if show_answer:
                     layout.text(center,y+1,char,BODY_SIZE,center=True)
                 x += width
             continue
-        width = max(pdfmetrics.stringWidth(han,'CN',BODY_SIZE),
-                    pdfmetrics.stringWidth(py,'Latin',PINYIN_SIZE)+2)
+        han_width = pdfmetrics.stringWidth(han,'CN',BODY_SIZE)
+        py_width = pdfmetrics.stringWidth(py,'Latin',PINYIN_SIZE)
+        ruby_base = BODY_SIZE*len(re.findall(HAN,han)) or han_width
+        padding = max(0,py_width+2-ruby_base)/2 if py else 0
+        width = han_width+2*padding
         if x+width > right:
-            x,y = left,y+ROW_STEP
-        layout.text(x+width/2,y,han,BODY_SIZE,center=True)
+            x,y = left,y+step
+        layout.text(x+padding,y,han,BODY_SIZE)
         if py:
-            layout.text(x+width/2,y-RUBY_OFFSET,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
+            layout.text(x+padding+ruby_base/2,y-ruby_offset,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
         x += width
     return y
 
-def draw_groups(layout,y,groups,answer_box=False):
+def draw_groups(layout,y,groups,answer_box=False,step=ROW_STEP):
     if len(groups)>1:
         bottom = y
         for index,(label,cells) in enumerate(groups):
             x = 39+index*105
             layout.text(x,y,label,NUMBER_SIZE,'Latin')
-            bottom = max(bottom,draw_cells(layout,x+15,y,cells,x+102))
+            bottom = max(bottom,draw_cells(layout,x+15,y,cells,x+102,step=step))
         return bottom
     label,cells = groups[0]
     if label:
         layout.text(32,y,label,NUMBER_SIZE,'Latin')
     if answer_box:
         layout.box(329,y-12)
-    return draw_cells(layout,62,y,cells,321 if answer_box else 352)
+    return draw_cells(layout,62,y,cells,321 if answer_box else 352,step=step)
 
 def draw_components(layout,page,y):
     rows = source_rows(page)
@@ -386,8 +432,9 @@ def booklet(source,raw,keys,set_number,output,examples):
         group = 0 if page<=5 else 1 if page<=11 else 2
         part = [0,1,1,2,2,0,1,2,2,3,3,0,1][page-1]
         initial = page in (1,6,12)
+        heading,continued = SECTION_HEADERS.get(page,((first,last),False))
         layout.begin(('一、听力','二、阅读','三、书写')[group] if initial else '',
-                     PARTS[part],(48 if page==11 else first,47 if page==10 else last))
+                     PARTS[part],heading,continued=continued)
         if page == 1:
             t(32,119,'听一句话，选择正确图片。',9)
             t(32,131,'例句：'+LISTENING1_EXAMPLE,BODY_SIZE)
@@ -450,7 +497,7 @@ def booklet(source,raw,keys,set_number,output,examples):
                     t(62,130+i*17,line)
                 for x,s in zip((62,160,250),('A 公共汽车','B 自行车','C 地铁')):
                     t(x,183,s)
-                layout.mark(120,180)
+                layout.mark(68+pdfmetrics.stringWidth('A 公共汽车','CN',BODY_SIZE),180)
                 y=211
             elif page==7:
                 y=135
@@ -482,11 +529,13 @@ def booklet(source,raw,keys,set_number,output,examples):
                 ]
                 for y,groups in zip((133,157,181),example):
                     draw_groups(layout,y,groups)
-                layout.mark(184,178)
-                y=214
+                layout.mark(195,178)
+                y=208
             elif page==12:
                 t(32,145,'例',NUMBER_SIZE)
-                layout.pair(62,145,'日 ＋（月）→ 明','míng')
+                prefix = '日 ＋（月）→ '
+                t(62,145,prefix,BODY_SIZE)
+                layout.pair(62+pdfmetrics.stringWidth(prefix,'CN',BODY_SIZE),145,'明','míng')
                 layout.box(316,128,35,32)
                 t(333.5,148,'明',BODY_SIZE,center=True)
                 draw_components(layout,source[page],177)
@@ -500,10 +549,6 @@ def booklet(source,raw,keys,set_number,output,examples):
                 blanks = [d['rect'] for d in source[page].get_drawings()
                           if d['rect'].width>45 and d['rect'].height==0] if page==13 else []
                 rows = source_cells(source[page],start=start,blanks=blanks)
-                if page in (10,11):
-                    preceding = list(source_cells(source[10]))
-                    split = next(i for i,groups in enumerate(preceding) if groups[0][0]=='48.')
-                    rows = preceding[:split] if page==10 else chain(preceding[split:],rows)
                 for groups in rows:
                     label = groups[0][0]
                     if page==13:
@@ -512,9 +557,10 @@ def booklet(source,raw,keys,set_number,output,examples):
                         assert y+6 < 500, (page,y,groups)
                         y += 55
                     else:
-                        y = draw_groups(layout,y,groups,answer_box=page in (8,9) and label.endswith('.'))
+                        step = 21 if page==10 else ROW_STEP
+                        y = draw_groups(layout,y,groups,answer_box=page in (8,9) and label.endswith('.'),step=step)
                         assert y < 500, (page,y,groups)
-                        y += ROW_STEP
+                        y += step
                         if len(groups)==3 and page in (4,5,10,11):
                             y += 7
         layout.end()
@@ -609,10 +655,12 @@ def main():
     for path in (problem,answer):
         with fitz.open(path) as pdf:
             print(path,len(pdf),path.stat().st_size)
+            assert path.stat().st_size <= 5_000_000
             for i,page in enumerate(pdf,1):
                 pixels=page.get_pixmap(matrix=fitz.Matrix(1.65,1.65))
+                label = '문제지' if path==problem else '정답및해설'
+                pixels.save(preview/f'제{n:02}회_{label}-{i:02}.png')
                 if path==problem:
-                    pixels.save(preview/f'제{n:02}회_문제지-{i:02}.png')
                     image=Image.frombytes('RGB',(pixels.width,pixels.height),pixels.samples)
                     assert len(zxingcpp.read_barcodes(image))==(1 if i==1 else 0)
 

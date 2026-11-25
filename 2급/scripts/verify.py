@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 import pymupdf as fitz
 import zxingcpp
 
-from booklet import answers, BODY_SIZE, PINYIN_SIZE, PAGE_RANGES, PARTS
+from booklet import answers, BODY_SIZE, PINYIN_SIZE, PAGE_RANGES, PARTS, SECTION_HEADERS, range_title
 
 def render(page,matrix=fitz.Matrix(1.5,1.5)):
     pix=page.get_pixmap(matrix=matrix)
@@ -35,6 +35,7 @@ def main():
           fitz.open(Path('output')/(stem+'정답및해설.pdf')) as solution):
         keys,scripts=answers(source)
         assert len(question)==16
+        assert not any(zxingcpp.read_barcodes(render(page)) for page in solution)
         assert all(Path(pdf.name).stat().st_size<=5_000_000 for pdf in (question,solution))
         answer_text=solution[0].get_text()
         for i,answer in keys.items():
@@ -58,12 +59,10 @@ def main():
             text=compact(page.get_text())
             assert not any(item in text for item in ('사진AI생성','한국어해설','답안기록지'))
         for p,(first,last) in enumerate(PAGE_RANGES,1):
-            if p==10:
-                last=47
-            elif p==11:
-                first=48
             page=question[p+1 if p<=5 else p+2]
             result=page.get_text()
+            heading,continued = SECTION_HEADERS.get(p,((first,last),False))
+            assert range_title(heading,continued) in result,(p,result)
             assert re.findall(r'(?m)^0?(\d{1,2})\.(?=\s|$)',result)==[str(i) for i in range(first,last+1)], (p,result)
             if p>=4:
                 for block in page.get_text('dict',flags=fitz.TEXTFLAGS_TEXT)['blocks']:
@@ -83,7 +82,7 @@ def main():
 
         original = item_text(source[i].get_text(clip=fitz.Rect(37,149,558,788))
                              for i in (10,11))
-        result = item_text(question[i].get_text(clip=fitz.Rect(37,310 if i==12 else 185,558,790))
+        result = item_text(question[i].get_text(clip=fitz.Rect(37,295 if i==12 else 179,558,790))
                            for i in (12,13))
         assert original.keys()==result.keys()==set(range(46,51))
         for n in original:
