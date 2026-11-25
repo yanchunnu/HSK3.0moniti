@@ -41,6 +41,10 @@ NUMBER_SIZE = 9
 RUBY_OFFSET = 11
 ROW_STEP = 24
 CELL_WIDTH = 28 / (595.276 / 382)
+OPTION_LEFT = 39
+OPTION_RIGHT = 352
+OPTION_COLUMN = (OPTION_RIGHT - OPTION_LEFT) / 3
+OPTION_INSET = 15
 RUBY_SCALE = 0.73
 HALF_PUNCTUATION = '，。？！、：；（）,.?!:;'
 CLOSING_PUNCTUATION = '，。？！、：；）,.?!:;'
@@ -364,20 +368,23 @@ def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=R
     return y+index*step
 
 
-def group_plan(groups,answer_box=False,writing_answer=''):
+def group_plan(groups,answer_box=False,writing_answer='',*,checked=None):
+    if [label for label,_ in groups] == list('ABC'):
+        return [(label,OPTION_LEFT+column*OPTION_COLUMN,0,
+                 grid_lines(cells,OPTION_COLUMN-OPTION_INSET-(16 if label==checked else 4)))
+                for column,(label,cells) in enumerate(groups)]
     if len(groups)>1:
-        # Size each column by its option, so long options can use a second row.
         plan = []
         row = 0
-        x = 39
+        x = OPTION_LEFT
         for label,cells in groups:
-            lines = grid_lines(cells,352-54)
+            lines = grid_lines(cells,OPTION_RIGHT-OPTION_LEFT-OPTION_INSET)
             width = max(sum(cell[2] for cell in line) for line in lines)*CELL_WIDTH/2
-            if x+15+width > 352:
+            if x+OPTION_INSET+width > OPTION_RIGHT:
                 row = max(offset+len(lines) for _,_,offset,lines in plan)
-                x = 39
+                x = OPTION_LEFT
             plan.append((label,x,row,lines))
-            x += 15+width+18
+            x += OPTION_INSET+width+18
         return plan
     label,cells = groups[0]
     return [(label,32,0,grid_lines(cells,(321 if answer_box else 352)-62,writing_answer))]
@@ -395,12 +402,23 @@ def draw_plan(layout,y,plan,answer_box,step):
         if answer_box:
             layout.box(329,baseline-12)
         for i,line in enumerate(lines):
-            draw_grid(layout,62 if x==32 else x+15,baseline+i*step,line)
+            draw_grid(layout,62 if x==32 else x+OPTION_INSET,baseline+i*step,line)
     return y+(plan_height(plan)-1)*step
 
 
 def plan_height(plan):
     return max(offset+len(lines) for _,_,offset,lines in plan)
+
+
+def draw_checked_options(layout,y,groups,checked):
+    plan = group_plan(groups,checked=checked)
+    last_y = draw_plan(layout,y,plan,False,ROW_STEP)
+    _,x,offset,lines = next(item for item in plan if item[0]==checked)
+    used = sum(cell[2] for cell in lines[-1])*CELL_WIDTH/2
+    # Leave a grid cell after the last glyph where the column permits it.
+    mark_x = min(x+OPTION_INSET+used+CELL_WIDTH-4,x+OPTION_COLUMN-13)
+    layout.mark(mark_x,y+(offset+len(lines)-1)*ROW_STEP-3)
+    return last_y
 
 
 def question_blocks(rows):
@@ -447,27 +465,27 @@ def draw_components(layout,page,y):
         inside = [span for span in spans if span['origin'][0] < 150]
         arrow, = [span for span in spans if span['text']=='→']
         layout.text(32,y,number[0]['text'],NUMBER_SIZE,'Latin')
-        x = 62
+        diagram_x = 97
+        x = diagram_x
         for span in hint:
             value = span['text']
             font = 'KR' if 'Malgun' in span['font'] else 'Latin'
             size = PINYIN_SIZE if font=='Latin' else NUMBER_SIZE
-            layout.text(x,y-10,value,size,font)
+            layout.text(x,y-4,value,size,font)
             x += pdfmetrics.stringWidth(value,font,size)
-        layout.box(62,y+1,45,32)
+        layout.box(diagram_x,y+1,45,32)
         for span in inside:
             sx,sy = span['origin']
             value = span['text']
             font = 'Latin' if value=='?' else 'CN'
-            layout.text(67+(sx-84)*.60,y+(sy-baseline)*.49,value,BODY_SIZE,font)
-        for i in range(3):
-            x = 126+48*i
-            layout.text(x,y+23,choices[2*i]['text'],NUMBER_SIZE,'Latin')
-            draw_cells(layout,x+14,y+23,[(choices[2*i+1]['text'],ruby[i]['text'])],x+35)
-        layout.text(289,y+23,arrow['text'],BODY_SIZE)
+            layout.text(diagram_x+5+(sx-84)*.60,y+(sy-baseline)*.49,value,BODY_SIZE,font)
+        layout.text(224,y+23,arrow['text'],BODY_SIZE)
         layout.box(316,y+1,35,32)
-        y += 64
-    assert y-30 < 509
+        groups = [(choices[2*i]['text'].strip(),[(choices[2*i+1]['text'],ruby[i]['text'])])
+                  for i in range(3)]
+        bottom = draw_groups(layout,y+48,groups)
+        y = bottom+20
+    assert bottom < 509
 
 def draw_listening1_example(layout):
     c = layout.c
@@ -611,9 +629,8 @@ def booklet(source,raw,keys,set_number,output,examples):
                 t(32,130,'例',9)
                 for i,line in enumerate(EXAMPLE3):
                     t(62,130+i*17,line)
-                for x,s in zip((62,160,250),('A 公共汽车','B 自行车','C 地铁')):
-                    t(x,183,s)
-                layout.mark(68+pdfmetrics.stringWidth('A 公共汽车','CN',BODY_SIZE),180)
+                draw_checked_options(layout,183,[(label,[(han,'')]) for label,han in
+                                     zip('ABC',('公共汽车','自行车','地铁'))],'A')
                 y=211
             elif page==7:
                 y=135
@@ -643,12 +660,9 @@ def booklet(source,raw,keys,set_number,output,examples):
                     [(label,list(zip(han,py.split()))) for label,han,py in
                      [('A','今天','jīn tiān'),('B','明天','míng tiān'),('C','后天','hòu tiān')]],
                 ]
-                for y,groups in zip((133,157,181),example):
+                for y,groups in zip((133,157),example):
                     draw_groups(layout,y,groups)
-                option_plan = group_plan(example[-1])
-                _,x,_,lines = option_plan[1]
-                layout.mark(x+15+sum(cell[2] for cell in lines[0])*CELL_WIDTH/2+1,178)
-                y=208
+                y = draw_checked_options(layout,181,example[-1],'B')+27
             elif page==12:
                 t(32,145,'例',NUMBER_SIZE)
                 prefix = '日 ＋（月）→ '
