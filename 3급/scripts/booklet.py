@@ -98,8 +98,9 @@ def photos(raw,page):
             yield fitz.Rect(x,height-y-h,x+w,height-y)
 
 class Layout:
-    def __init__(self,set_number):
+    def __init__(self,set_number,*,level: int = 2):
         self.set = set_number
+        self.level = level
         self.buf = BytesIO()
         self.c = canvas.Canvas(self.buf,pagesize=(595.276,841.89))
         self.pages = 0
@@ -138,7 +139,7 @@ class Layout:
         if subheader:
             self.text(35,31,subheader,8)
         else:
-            self.text(27,24,f'HSK 3.0  •  2급 제{self.set}회 모의고사',8,'KR')
+            self.text(27,24,f'HSK 3.0 • {self.level}급 제{self.set}회 모의고사',8,'KR')
         self.line(27,37 if subheader else 31,355,37 if subheader else 31)
         if title:
             self.text(191,67,title,20,center=True)
@@ -591,10 +592,10 @@ def draw_listening1_example(layout):
         layout.text(x,192,label,NUMBER_SIZE,'Latin',True)
     layout.mark(225,188)
 
-def booklet(source,raw,keys,set_number,output,examples):
-    layout = Layout(set_number)
+def booklet(source,raw,keys,set_number,output,examples,*,level: int = 2):
+    layout = Layout(set_number,level=level)
     t,ln = layout.text,layout.line
-    url = f'https://yanchunnu.github.io/-/hsk-listening.html?level=2&set={set_number}'
+    url = f'https://yanchunnu.github.io/-/hsk-listening.html?level={level}&set={set_number}'
     layout.begin(cover=True)
     # The supplied cover shares the Level 1 design.
     cover = source[0]
@@ -605,7 +606,7 @@ def booklet(source,raw,keys,set_number,output,examples):
     layout.end()
 
     layout.begin('考试结构')
-    t(191,91,'HSK 3.0（二级）',13,center=True)
+    t(191,91,f'HSK 3.0（{NAMES[level-1]}级）',13,center=True)
     cols = [35,96,167,219,267,347]
     row = 0
     for y in range(117,382,24):
@@ -776,10 +777,10 @@ def booklet(source,raw,keys,set_number,output,examples):
     intermediate.unlink()
     assert output.stat().st_size <= 5_000_000
 
-def answer_booklet(keys,scripts,set_number,path,examples):
-    layout=Layout(set_number)
+def answer_booklet(keys,scripts,set_number,path,examples,*,level: int = 2):
+    layout=Layout(set_number,level=level)
     t=layout.text
-    head=f'HSK 3.0  /  二级  /  第{NAMES[set_number-1]}套'
+    head=f'HSK 3.0  /  {NAMES[level-1]}级  /  第{NAMES[set_number-1]}套'
     layout.begin('答案表',subheader=head)
     n=1
     y=96
@@ -840,7 +841,7 @@ def main():
         parser.error('supply --examples for the selected source photos and options')
     examples=json.loads(args.examples.read_text(encoding='utf8')) if args.examples else SAMPLE_EXAMPLES
     n=args.set_number
-    stem=f'HSK3.0_2급_제{n:02}회_'
+    stem=f'HSK3.0_{args.level}급_제{n:02}회_'
     source_path=Path('input/sets')/(stem+'표지통일_전체듣기QR.pdf')
     out=Path('output')
     preview=out/'preview'
@@ -849,8 +850,8 @@ def main():
     answer=out/(stem+'정답및해설.pdf')
     with fitz.open(source_path) as source:
         keys,scripts=answers(source)
-        booklet(source,PdfReader(source_path),keys,n,problem,examples)
-        answer_booklet(keys,scripts,n,answer,examples)
+        booklet(source,PdfReader(source_path),keys,n,problem,examples,level=args.level)
+        answer_booklet(keys,scripts,n,answer,examples,level=args.level)
     for path in (problem,answer):
         with fitz.open(path) as pdf:
             print(path,len(pdf),path.stat().st_size)

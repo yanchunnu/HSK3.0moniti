@@ -38,7 +38,7 @@ def main():
     if args.level == 3:
         from verify3 import verify
         return verify(n)
-    stem=f'HSK3.0_2급_제{n:02}회_'
+    stem=f'HSK3.0_{args.level}급_제{n:02}회_'
     with (fitz.open(Path('input/sets')/(stem+'표지통일_전체듣기QR.pdf')) as source,
           fitz.open(Path('output')/(stem+'문제지.pdf')) as question,
           fitz.open(Path('output')/(stem+'정답및해설.pdf')) as solution):
@@ -60,7 +60,7 @@ def main():
         for i,lines in scripts.items():
             hit=re.search(rf'(?ms)^{i}\.\n(.*?)(?=^\d+\.$|^例$|\Z)',transcript)
             assert compact(hit[1])==''.join(lines),(i,hit[1],lines)
-        url=f'https://yanchunnu.github.io/-/hsk-listening.html?level=2&set={n}'
+        url=f'https://yanchunnu.github.io/-/hsk-listening.html?level={args.level}&set={n}'
         for i,page in enumerate(question):
             assert [item.text for item in zxingcpp.read_barcodes(render(page))]==([url] if i==0 else [])
             assert [item['uri'] for item in page.get_links()]==([url] if i==0 else [])

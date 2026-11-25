@@ -1,4 +1,4 @@
-"""Parse the numbered Level 3 source and lay it out with the Level 2 styles."""
+"""Parse the numbered Level 3 source and lay out the exam and answer booklets."""
 from pathlib import Path
 import json
 import re
@@ -56,12 +56,12 @@ def parse(number):
 
 
 class Exam(Layout):
-    def begin(self, *args, **kwargs):
-        super().begin(*args, **kwargs)
-        if not kwargs.get('cover') and not kwargs.get('subheader'):
-            self.c.setFillColor('white')
-            self.c.rect(26, 512, 325, 15, fill=1, stroke=0)
-            self.text(27, 24, f'HSK 3.0  •  3급 제{self.set}회 모의고사', 8, 'KR')
+    def __init__(self, number):
+        super().__init__(number, level=3)
+
+    def numbered_text(self, number, y, value, x=36):
+        self.text(x, y, f'{number}.')
+        return self.text_lines(x+24, y, value, width=355-x-24)
 
     def text_lines(self, x, y, value, width=309, step=15):
         while value:
@@ -325,24 +325,23 @@ def booklet(number, data, path):
         ruby,sentence=re.search(rf'(?m)^\s*{n}\.\s*(\S+)\s+(.+)$',pages[5]).groups()
         writing_line(l,str(n)+'.',218+51*i,re.sub(r'（_+）',BLANK,sentence),ruby,keys[n])
     l.end()
-    assert len(pictures(doc,5))==5
-    for j,(start,end) in enumerate(((0,3),(3,5))):
-        l.begin('',PARTS[1],(66,70),continued=bool(j))
-        t(32,110,'请用所给词语，根据图片写一个完整的句子。')
-        if not j:
-            art(l,'wash',39,127)
-            t(138,152,'例：'+EX['writing2'][0])
-            t(138,174,EX['writing2'][1])
-        for i,clip in enumerate(pictures(doc,5)[start:end],start):
-            y=(201 if not j else 142)+(i-start)*93
-            n=66+i
-            word=re.search(rf'{n}\.\s*提示词：(\S+)',pages[5])[1]
-            l.image(doc,5,clip,39,y,92,67)
-            t(39,y+80,str(n)+'.')
-            t(147,y+19,word)
-            l.line(147,y+49,348,y+49)
-            l.line(147,y+69,348,y+69)
-        l.end()
+    writing_photos = pictures(doc,5)
+    assert len(writing_photos)==5
+    l.begin('',PARTS[1],(66,70))
+    t(32,110,'请用所给词语，根据图片写一个完整的句子。')
+    art(l,'wash',59,125,76,52)
+    t(32,145,'例')
+    t(147,145,EX['writing2'][0])
+    t(147,166,EX['writing2'][1])
+    for n,clip in enumerate(writing_photos,66):
+        y=187+(n-66)*62
+        word=re.search(rf'{n}\.\s*提示词：(\S+)',pages[5])[1]
+        t(32,y+19,f'{n}.')
+        l.image(doc,5,clip,59,y,80,52)
+        t(147,y+16,word)
+        l.line(147,y+34,348,y+34)
+        l.line(147,y+50,348,y+50)
+    l.end()
 
     l.begin('口语','考试说明')
     t(32,120,'口语考试约15分钟，含准备时间6分钟。')
@@ -378,32 +377,36 @@ def answer_booklet(number, data, path):
     _, _, keys, listening, oral = data
     l=Exam(number)
     l.begin('答案表',subheader='HSK 3.0（三级）')
-    y=105
-    for start,end,title in [(1,30,'听力'),(31,60,'阅读'),(61,70,'书写')]:
+    for start,title,y in ((1,'听力',99),(31,'阅读',226)):
         l.text(32,y,title,13)
-        y+=22
-        if end<=60:
-            for n in range(start,end+1):
-                pos=n-start
-                l.text(37+64*(pos%5),y+17*(pos//5),f'{n}. {keys[n]}')
-            y+=99
-        else:
-            for n in range(start,end+1):
-                l.text(37,y,f'{n}. {keys[n]}')
-                y+=11
+        for offset in range(30):
+            n=start+offset
+            x=37+64*(offset%5)
+            baseline=y+20+16*(offset//5)
+            l.text(x,baseline,f'{n}.')
+            l.text(x+24,baseline,keys[n])
+    l.text(32,353,'书写',13)
+    l.text(37,375,'第一部分  61-65题（词语）')
+    for n in range(61,66):
+        x=37+64*(n-61)
+        l.text(x,392,f'{n}.')
+        l.text(x+24,392,keys[n])
+    l.text(37,416,'第二部分  66-70题（句子）')
+    for n in range(66,71):
+        l.numbered_text(n,436+15*(n-66),keys[n],x=37)
     l.end()
     l.begin('口语','第一部分　听后重复',subheader='HSK 3.0（三级）')
     for i in range(1,9):
-        l.text(36,115+23*(i-1),f'{i}.  '+oral[i][0])
+        l.numbered_text(i,115+23*(i-1),oral[i][0])
     l.text(191,323,'第二部分　看图说话',13,center=True)
     for i in range(9,14):
-        l.text(36,353+23*(i-9),f'{i}.  '+oral[i][0])
+        l.numbered_text(i,353+23*(i-9),oral[i][0])
     l.end()
     l.begin('口语','第三部分　回答问题',subheader='HSK 3.0（三级）')
     y=119
     for i in (14,15):
-        y=l.text_lines(36,y,f'{i}.  '+oral[i][0])+12
-        y=l.text_lines(48,y,oral[i][1],width=299)+33
+        y=l.numbered_text(i,y,oral[i][0])+12
+        y=l.text_lines(60,y,oral[i][1],width=295)+33
     l.end()
     for j,(start,end) in enumerate(((1,5),(6,10),(11,15),(16,20),(21,25),(26,30))):
         part=(0,0,1,1,2,2)[j]
@@ -415,7 +418,10 @@ def answer_booklet(number, data, path):
             y+=10
         for n in range(start,end+1):
             for i,line in enumerate(listening[n]):
-                y=l.text_lines(37,y,(f'{n}.  ' if not i else '　　')+line)
+                if i == 0:
+                    y=l.numbered_text(n,y,line,x=37)
+                else:
+                    y=l.text_lines(61,y,line,width=294)
             y+=10
         assert y<509, (j,y)
         l.end()
@@ -436,6 +442,11 @@ def build(number):
         with fitz.open(path) as pdf:
             for i,page in enumerate(pdf,1):
                 page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{label}-{i:02}.png')
+            prefix=f'제{number:02}회_{label}-'
+            for image in preview.glob(f'{prefix}*.png'):
+                suffix=image.stem.removeprefix(prefix)
+                if suffix.isdecimal() and int(suffix)>len(pdf):
+                    image.unlink()
             print(label,len(pdf),path.stat().st_size)
 
 

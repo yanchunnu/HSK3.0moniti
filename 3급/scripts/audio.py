@@ -38,14 +38,15 @@ def parse(path):
     assert sorted(blocks)==list(range(-3,0))+list(range(1,26))
     return blocks
 
-def exam(number,blocks):
+def exam(number,blocks,*,level: int = 2):
+    grade = NUMBERS[level-1] + '级'
     intro = [('f',t,p) for t,p in [
-        ('中文水平考试。',.52),('HSK三点零二级。',.85),
+        ('中文水平考试。',.52),(f'HSK三点零{grade}。',.85),
         (f'全真模拟试卷{NUMBERS[number-1]}。',2.1),
-        ('大家好！欢迎参加HSK二级考试。',1.6),
-        ('大家好！欢迎参加HSK二级考试。',1.6),
-        ('大家好！欢迎参加HSK二级考试。',2.25),
-        ('HSK二级听力考试分三部分，共二十五题。',1.34),
+        (f'大家好！欢迎参加HSK{grade}考试。',1.6),
+        (f'大家好！欢迎参加HSK{grade}考试。',1.6),
+        (f'大家好！欢迎参加HSK{grade}考试。',2.25),
+        (f'HSK{grade}听力考试分三部分，共二十五题。',1.34),
         ('请大家注意，听力考试现在开始。',2.07)]]
     parts = []
     for i,(start,stop) in enumerate([(1,6),(6,16),(16,26)]):
@@ -131,9 +132,9 @@ def main():
     if args.level == 3:
         from audio3 import build as build_level3_audio
         return build_level3_audio(args.set_number,args.model)
-    stem=f'HSK3.0_2급_제{args.set_number:02}회_'
+    stem=f'HSK3.0_{args.level}급_제{args.set_number:02}회_'
     blocks=parse(Path('output')/(stem+'정답및해설.pdf'))
-    intro,parts,end=exam(args.set_number,blocks)
+    intro,parts,end=exam(args.set_number,blocks,level=args.level)
     full=[*intro,*sum(parts,[]),*end]
     clips={key:trim(path) for key,path in asyncio.run(synthesize(full,Path('tmp/tts'))).items()}
     out=Path('output/audio')

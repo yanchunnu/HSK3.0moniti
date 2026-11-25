@@ -32,11 +32,17 @@ def verify(number):
                 image = Image.frombytes('RGB',(pix.width,pix.height),pix.samples)
                 qr = [barcode.text for barcode in zxingcpp.read_barcodes(image)]
                 assert qr == ([url] if i==0 and doc is question else []), (i, qr)
-                assert page.get_text().strip()
+                text = page.get_text()
+                assert text.strip()
+                assert f'{2}급' not in text, (doc.name, i+1)
+                if doc is question and i:
+                    header = f'HSK 3.0 • 3급 제{number}회 모의고사'
+                    assert text.splitlines().count(header) == 1, (i, text)
+                    assert page.get_text(clip=fitz.Rect(0,795,page.rect.width,841)).strip() == str(i)
                 for block in page.get_text('blocks'):
                     if block[6] == 0:
                         assert page.rect.contains(fitz.Rect(block[:4])), (i,block)
-        qtext = ''.join(page.get_text() for page in question[2:19])
+        qtext = ''.join(page.get_text() for page in question[2:-3])
         assert [int(x) for x in re.findall(r'(?m)^\s*(\d+)\.', qtext)] == list(range(1,71))
         printed = compact(qtext)
         source_choices = re.findall(
@@ -54,7 +60,7 @@ def verify(number):
         assert len(passages) == 10
         for n, body, prompt, a,b,c in passages:
             assert compact(f'{n}.{body}★{prompt}A{a}B{b}C{c}') in printed, n
-        for pageno, count in [(3,8),(4,5),(18,4),(19,2),(21,5)]:
+        for pageno, count in [(3,8),(4,5),(len(question)-3,6),(len(question)-1,5)]:
             assert len(question[pageno-1].get_image_info()) == count, pageno
         atext = compact(solution[0].get_text())
         for n, value in answers.items():
