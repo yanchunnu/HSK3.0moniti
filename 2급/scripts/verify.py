@@ -91,11 +91,11 @@ def main():
 
         original = item_text(source[i].get_text(clip=fitz.Rect(37,149,558,788))
                              for i in (10,11))
-        result = item_text(page.get_text(clip=fitz.Rect(37,295 if p==10 and index==0 else 179,558,790))
+        result = item_text(page.get_text(clip=fitz.Rect(37,295 if p==10 and index==0 else 162 if index else 179,558,790))
                            for p in (10,11) for index,page in enumerate(section_pages[p]))
         assert original.keys()==result.keys()==set(range(46,51))
-        for n in original:
-            assert original[n]==result[n], (n,original[n]-result[n],result[n]-original[n])
+        for item in original:
+            assert original[item]==result[item], (item,original[item]-result[item],result[item]-original[item])
         for p in (4,5,6,7,8,9,12,13):
             start = 442 if p==6 else 149
             original = source[p].get_text(clip=fitz.Rect(37,start,558,788))
