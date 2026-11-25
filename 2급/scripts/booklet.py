@@ -325,12 +325,15 @@ def grid_words(cells,writing_answer):
 def grid_lines(cells,width,writing_answer=''):
     capacity = int(width/(CELL_WIDTH/2)+1e-6)
     lines = [[]]
-    used = 0
+    widths = [0]
+    boundaries = [[]]
     for word in grid_words(cells,writing_answer):
         size = sum(cell[2] for cell in word)
-        if used and used+size > capacity:
+        if widths[-1] and widths[-1]+size > capacity:
             lines.append([])
-            used = 0
+            widths.append(0)
+            boundaries.append([])
+        boundaries[-1].append(len(lines[-1]))
         clusters = []
         for cell in word:
             if clusters and cell[0] in CLOSING_PUNCTUATION:
@@ -339,11 +342,25 @@ def grid_lines(cells,width,writing_answer=''):
                 clusters.append([cell])
         for cluster in clusters:
             size = sum(cell[2] for cell in cluster)
-            if used+size > capacity:
+            if lines[-1] and widths[-1]+size > capacity:
                 lines.append([])
-                used = 0
+                widths.append(0)
+                boundaries.append([])
             lines[-1].extend(cluster)
-            used += size
+            widths[-1] += size
+    if len(lines) > 1 and widths[-1] <= max(4,min(7,capacity//4)):
+        previous, last = lines[-2:]
+        candidates = []
+        for cut in boundaries[-2]:
+            if not cut or previous[cut-1][0] == '（':
+                continue
+            head, tail = previous[:cut], previous[cut:]+last
+            a, b = (sum(cell[2] for cell in line) for line in (head,tail))
+            if b <= capacity and abs(a-b) < abs(widths[-2]-widths[-1]):
+                candidates.append((abs(a-b),cut))
+        if candidates:
+            _,cut = min(candidates)
+            lines[-2:] = [previous[:cut],previous[cut:]+last]
     return lines
 
 
@@ -370,9 +387,40 @@ def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=R
 
 def group_plan(groups,answer_box=False,writing_answer='',*,checked=None):
     if [label for label,_ in groups] == list('ABC'):
-        return [(label,OPTION_LEFT+column*OPTION_COLUMN,0,
-                 grid_lines(cells,OPTION_COLUMN-OPTION_INSET-(16 if label==checked else 4)))
-                for column,(label,cells) in enumerate(groups)]
+        padding = [OPTION_INSET+(16 if label==checked else 4) for label,_ in groups]
+        widths = [OPTION_COLUMN]*3
+        if checked is None:
+            required = [pad+sum(cell[2] for word in grid_words(cells,'') for cell in word)*CELL_WIDTH/2
+                        for pad,(_,cells) in zip(padding,groups)]
+            if max(required) > OPTION_COLUMN:
+                available = OPTION_RIGHT-OPTION_LEFT
+                half_cell = CELL_WIDTH/2
+                capacity = int((available-sum(padding))/half_cell)
+                # Try grid-aligned widths, preferring fewer wrapped options.
+                min_cells = 4
+                choices = []
+                for (_,cells),need,pad in zip(groups,required,padding):
+                    count = round((need-pad)/half_cell)
+                    choices.append({size: len(grid_lines(cells,size*half_cell))
+                                    for size in range(min_cells,max(min_cells,count)+1)})
+                best = None
+                for a in range(min_cells,capacity-2*min_cells+1):
+                    for b in range(min_cells,capacity-a-min_cells+1):
+                        sizes = a,b,capacity-a-b
+                        heights = [options[min(size,max(options))]
+                                   for size,options in zip(sizes,choices)]
+                        score = max(heights),sum(heights),sum((3*size-capacity)**2 for size in sizes)
+                        if best is None or score < best[0]:
+                            best = score,sizes
+                widths = [pad+size*half_cell for pad,size in zip(padding,best[1])]
+                slack = (available-sum(widths))/3
+                widths = [width+slack for width in widths]
+        plan = []
+        x = OPTION_LEFT
+        for (label,cells),width,pad in zip(groups,widths,padding):
+            plan.append((label,x,0,grid_lines(cells,width-pad)))
+            x += width
+        return plan
     if len(groups)>1:
         plan = []
         row = 0
@@ -433,20 +481,40 @@ def question_blocks(rows):
 
 
 def draw_question_blocks(layout,rows,y,part,heading,*,step=ROW_STEP,gap=0,
-                         answer_box=False,writing_keys=None):
+                         answer_box=False,writing_keys=None,fit_page=False):
+    blocks = []
     for block in question_blocks(rows):
+        if fit_page:
+            # The source may wrap a passage before the separate question line.
+            passage = list(block[0][0][1])
+            end = 1
+            for groups in block[1:]:
+                if len(groups) != 1 or groups[0][0] or ''.join(
+                        han for han,_ in groups[0][1][:2]).startswith('问：'):
+                    break
+                passage.extend(groups[0][1])
+                end += 1
+            block = [[(block[0][0][0],passage)],*block[end:]]
         plans = []
         for groups in block:
             label = groups[0][0]
             blank = answer_box and label.endswith('.')
             answer = writing_keys[int(label[:-1])] if writing_keys else ''
             plans.append((group_plan(groups,blank,answer),blank))
+        blocks.append(plans)
+    if fit_page:
+        intervals = sum(plan_height(plan) for plans in blocks for plan,_ in plans)-1
+        gaps = len(blocks)-1
+        if y+intervals*step+gaps*gap > 495:
+            gap = min(gap,4)
+            step = max(18,min(step,(495-y-gaps*gap)/intervals))
+    for plans in blocks:
         height = sum(plan_height(plan) for plan,_ in plans)*step
-        if y+height-step > 495:
+        if y+height-step > 495.001:
             layout.end()
             layout.begin(part=part,question_range=heading,continued=True)
             y = 124
-        assert y+height-step <= 495, block
+        assert y+height-step <= 495.001, plans
         for plan,blank in plans:
             y = draw_plan(layout,y,plan,blank,step)+step
         y += gap
@@ -684,7 +752,8 @@ def booklet(source,raw,keys,set_number,output,examples):
                 draw_question_blocks(layout,rows,y,PARTS[part],heading,
                                      step=21 if page==10 else ROW_STEP,
                                      gap=31 if page==13 else 7 if page in (4,5,10,11) else 0,
-                                     answer_box=page in (8,9),writing_keys=keys if page==13 else None)
+                                     answer_box=page in (8,9),writing_keys=keys if page==13 else None,
+                                     fit_page=page in (10,11))
         layout.end()
 
     intermediate = output.with_suffix('.tmp.pdf')
