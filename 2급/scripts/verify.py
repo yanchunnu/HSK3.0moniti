@@ -8,7 +8,8 @@ from PIL import Image, ImageDraw
 import pymupdf as fitz
 import zxingcpp
 
-from booklet import answers, BODY_SIZE, PINYIN_SIZE, PAGE_RANGES, PARTS, SECTION_HEADERS, range_title
+from booklet import (answers, BODY_SIZE, PINYIN_SIZE, PAGE_RANGES, PARTS,
+                     RUBY_SCALE, SECTION_HEADERS, range_title)
 
 def render(page,matrix=fitz.Matrix(1.5,1.5)):
     pix=page.get_pixmap(matrix=matrix)
@@ -34,7 +35,6 @@ def main():
           fitz.open(Path('output')/(stem+'문제지.pdf')) as question,
           fitz.open(Path('output')/(stem+'정답및해설.pdf')) as solution):
         keys,scripts=answers(source)
-        assert len(question)==16
         assert not any(zxingcpp.read_barcodes(render(page)) for page in solution)
         assert all(Path(pdf.name).stat().st_size<=5_000_000 for pdf in (question,solution))
         answer_text=solution[0].get_text()
@@ -58,23 +58,32 @@ def main():
             assert [item['uri'] for item in page.get_links()]==([url] if i==0 else [])
             text=compact(page.get_text())
             assert not any(item in text for item in ('사진AI생성','한국어해설','답안기록지'))
+        number_pattern = r'(?m)^0?(\d{1,2})\.(?=\s|$)'
+        numbered = [(page,[int(n) for n in re.findall(number_pattern,page.get_text())])
+                    for page in question]
+        numbered = [(page,numbers) for page,numbers in numbered if numbers]
+        assert [n for _,numbers in numbered for n in numbers] == list(range(1,61))
+        section_pages = {}
         for p,(first,last) in enumerate(PAGE_RANGES,1):
-            page=question[p+1 if p<=5 else p+2]
-            result=page.get_text()
+            pages = [(page,numbers) for page,numbers in numbered if first <= numbers[0] <= last]
+            assert [n for _,numbers in pages for n in numbers] == list(range(first,last+1))
+            section_pages[p] = [page for page,_ in pages]
             heading,continued = SECTION_HEADERS.get(p,((first,last),False))
-            assert range_title(heading,continued) in result,(p,result)
-            assert re.findall(r'(?m)^0?(\d{1,2})\.(?=\s|$)',result)==[str(i) for i in range(first,last+1)], (p,result)
-            if p>=4:
+            for index,(page,_) in enumerate(pages):
+                assert range_title(heading,continued or index>0) in page.get_text()
                 for block in page.get_text('dict',flags=fitz.TEXTFLAGS_TEXT)['blocks']:
                     for line in block['lines']:
                         for span in line['spans']:
-                            if span['origin'][1] < 188 or span['text']=='例':
-                                continue
+                            y = span['origin'][1]
                             size = span['size']/(841.89/540)
-                            if span['font']=='SimHei' and re.search(r'[\u3400-\u9fff]',span['text']):
+                            if span['color']==0x4e5e70:
+                                # MuPDF reports the geometric mean of the two axis scales.
+                                assert abs(size-PINYIN_SIZE*RUBY_SCALE**.5)<.02, (p,span)
+                            elif p>=4 and y>=188 and span['text']!='例' and span['font']=='SimHei':
                                 assert abs(size-BODY_SIZE)<.02, (p,span)
-                            elif span['font']=='ArialMT' and re.search(r'[a-zÀ-ž]',span['text']):
-                                assert abs(size-PINYIN_SIZE)<.02, (p,span)
+                            if 188 <= y < 790:
+                                x0,y0,x1,y1 = span['bbox']
+                                assert x0>=30 and x1<=558 and y0>=160 and y1<793, (p,span)
         def item_text(pages):
             text = '\n'.join(pages)
             parts = re.split(r'(?m)^(\d{2})\.\s*',text)
@@ -82,15 +91,15 @@ def main():
 
         original = item_text(source[i].get_text(clip=fitz.Rect(37,149,558,788))
                              for i in (10,11))
-        result = item_text(question[i].get_text(clip=fitz.Rect(37,295 if i==12 else 179,558,790))
-                           for i in (12,13))
+        result = item_text(page.get_text(clip=fitz.Rect(37,295 if p==10 and index==0 else 179,558,790))
+                           for p in (10,11) for index,page in enumerate(section_pages[p]))
         assert original.keys()==result.keys()==set(range(46,51))
         for n in original:
             assert original[n]==result[n], (n,original[n]-result[n],result[n]-original[n])
         for p in (4,5,6,7,8,9,12,13):
             start = 442 if p==6 else 149
             original = source[p].get_text(clip=fitz.Rect(37,start,558,788))
-            result = question[p+1 if p<=5 else p+2].get_text()
+            result = '\n'.join(page.get_text() for page in section_pages[p])
             omitted = Counter(compact(original))-Counter(compact(result))
             assert not omitted,(p,omitted)
         sheet([render(page) for page in solution],Path(f'tmp/answers{n:02}.jpg'))

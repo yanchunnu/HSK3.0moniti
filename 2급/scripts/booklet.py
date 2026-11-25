@@ -40,6 +40,10 @@ PINYIN_SIZE = 7
 NUMBER_SIZE = 9
 RUBY_OFFSET = 11
 ROW_STEP = 24
+CELL_WIDTH = 28 / (595.276 / 382)
+RUBY_SCALE = 0.73
+HALF_PUNCTUATION = '，。？！、：；（）,.?!:;'
+CLOSING_PUNCTUATION = '，。？！、：；）,.?!:;'
 HAN = r'[\u3400-\u9fff]'
 # The pinyin phrase dictionary omits some compounds whose readings are unambiguous.
 COMMON_WORDS = re.compile(r'(昨天|今天|明天|后天|每天|七点半|出门|起床|学校|'
@@ -145,10 +149,17 @@ class Layout:
         self.c.restoreState()
         self.c.showPage()
 
-    def pair(self,x,y,han,py):
-        center = x+pdfmetrics.stringWidth(han,'CN',BODY_SIZE)/2
-        self.text(center,y-RUBY_OFFSET,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
-        self.text(x,y,han,BODY_SIZE)
+    def syllable(self,x,y,value):
+        width = pdfmetrics.stringWidth(value,'Latin',PINYIN_SIZE)*RUBY_SCALE
+        assert width <= CELL_WIDTH-0.6, (value,width)
+        self.c.saveState()
+        text = self.c.beginText(x-width/2,540-y)
+        text.setFont('Latin',PINYIN_SIZE)
+        text.setHorizScale(RUBY_SCALE*100)
+        text.setFillColor('#4e5e70')
+        text.textOut(value)
+        self.c.drawText(text)
+        self.c.restoreState()
 
     def image(self,source,page,clip,x,y,w,h):
         scale = min(w/clip.width,h/clip.height)
@@ -237,22 +248,6 @@ def writing_syllables(word, ruby):
         raise ValueError(f'Extra pinyin in {ruby!r} for {word!r}')
     return syllables
 
-def ruby_words(cells):
-    """Group source syllables by word without changing source spelling or tones."""
-    run = []
-    for han,py in cells:
-        if py and re.fullmatch(HAN+r'[，。？！、：；]*',han):
-            run.append((han,py))
-            if len(han)==1:
-                continue
-            yield from segment_ruby(run)
-            run.clear()
-        else:
-            yield from segment_ruby(run)
-            run.clear()
-            yield han,py
-    yield from segment_ruby(run)
-
 def segment_ruby(run):
     text = ''.join(han[0] for han,_ in run)
     words = []
@@ -265,56 +260,179 @@ def segment_ruby(run):
     for word in words:
         end = offset+len(word)
         cells = run[offset:end]
-        yield ''.join(han for han,_ in cells),' '.join(py for _,py in cells)
+        yield cells
         offset = end
 
-def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=ROW_STEP):
-    """Keep the Han in each word together and reserve space between words for ruby."""
-    left = x
-    ruby_offset = 15 if writing_answer else RUBY_OFFSET
-    for han,py in ruby_words(cells):
-        if han == '____':
-            syllables = writing_syllables(writing_answer,py)
-            size, gap = 18, 3
-            width = max(size+gap,*(pdfmetrics.stringWidth(s,'Latin',PINYIN_SIZE)+gap
-                                   for s in syllables))
-            if x+width*len(syllables) > right:
-                x,y = left,y+step
-            for char,syllable in zip(writing_answer,syllables):
-                center = x+width/2
-                layout.box(center-size/2,y-12,size,size)
-                layout.text(center,y-ruby_offset,syllable,PINYIN_SIZE,'Latin',True,'#4e5e70')
-                if show_answer:
-                    layout.text(center,y+1,char,BODY_SIZE,center=True)
-                x += width
-            continue
-        han_width = pdfmetrics.stringWidth(han,'CN',BODY_SIZE)
-        py_width = pdfmetrics.stringWidth(py,'Latin',PINYIN_SIZE)
-        ruby_base = BODY_SIZE*len(re.findall(HAN,han)) or han_width
-        padding = max(0,py_width+2-ruby_base)/2 if py else 0
-        width = han_width+2*padding
-        if x+width > right:
-            x,y = left,y+step
-        layout.text(x+padding,y,han,BODY_SIZE)
+def example_cells(han, ruby=None):
+    if ruby is None:
+        readings = [part[0] for part in pinyin(han, style=Style.TONE, errors="ignore")]
+    else:
+        ruby = re.sub(r'[(（][A-F][)）]','',ruby)
+        ruby = ''.join(char for char in ruby if char.isalpha() or char in "'’")
+        readings = writing_syllables(''.join(re.findall(HAN,han)),ruby)
+    syllables = iter(readings)
+    return [(char,next(syllables) if re.fullmatch(HAN,char) else '') for char in han]
+
+
+def grid_words(cells,writing_answer):
+    """Keep dictionary words together where possible, preserving source syllables."""
+    run = []
+    words = []
+    for han,py in cells:
+        if py and re.fullmatch(HAN+r'[，。？！、：；]*',han):
+            run.append((han,py))
+            if len(han)==1:
+                continue
+            words.extend(segment_ruby(run))
+            run = []
+        else:
+            words.extend(segment_ruby(run))
+            run = []
+            words.append([(han,py)])
+    words.extend(segment_ruby(run))
+
+    units = []
+    for word in words:
+        token = []
+        for han,py in word:
+            if han == '____':
+                token.extend((char,syllable,2,True)
+                             for char,syllable in zip(writing_answer,writing_syllables(writing_answer,py)))
+                continue
+            if not han.strip():
+                token.append(('', '', 2, False))
+                continue
+            # The source prints erhua as one syllable across two Han characters.
+            syllables = iter((py[:-1],py[-1:]) if re.match(HAN+'儿',han) and py.endswith('r') else (py,))
+            for char in han:
+                if char.isspace():
+                    continue
+                cell = (char,next(syllables,'') if re.fullmatch(HAN,char) else '',
+                        1 if char in HALF_PUNCTUATION else 2,False)
+                if char in CLOSING_PUNCTUATION and not token and units:
+                    units[-1].append(cell)
+                else:
+                    token.append(cell)
+        if token:
+            units.append(token)
+    return units
+
+
+def grid_lines(cells,width,writing_answer=''):
+    capacity = int(width/(CELL_WIDTH/2)+1e-6)
+    lines = [[]]
+    used = 0
+    for word in grid_words(cells,writing_answer):
+        size = sum(cell[2] for cell in word)
+        if used and used+size > capacity:
+            lines.append([])
+            used = 0
+        clusters = []
+        for cell in word:
+            if clusters and cell[0] in CLOSING_PUNCTUATION:
+                clusters[-1].append(cell)
+            else:
+                clusters.append([cell])
+        for cluster in clusters:
+            size = sum(cell[2] for cell in cluster)
+            if used+size > capacity:
+                lines.append([])
+                used = 0
+            lines[-1].extend(cluster)
+            used += size
+    return lines
+
+
+def draw_grid(layout,x,y,line,show_answer=False):
+    for han,py,units,box in line:
+        width = units*CELL_WIDTH/2
+        center = x+width/2
+        if box:
+            layout.box(center-7.5,y-12,15,15)
+            if show_answer:
+                layout.text(center,y,han,BODY_SIZE,center=True)
+        elif han:
+            layout.text(center,y,han,BODY_SIZE,center=True)
         if py:
-            layout.text(x+padding+ruby_base/2,y-ruby_offset,py,PINYIN_SIZE,'Latin',True,'#4e5e70')
+            layout.syllable(center,y-(15 if box else RUBY_OFFSET),py)
         x += width
-    return y
+
+
+def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=ROW_STEP):
+    for index,line in enumerate(grid_lines(cells,right-x,writing_answer)):
+        draw_grid(layout,x,y+index*step,line,show_answer)
+    return y+index*step
+
+
+def group_plan(groups,answer_box=False,writing_answer=''):
+    if len(groups)>1:
+        # Size each column by its option, so long options can use a second row.
+        plan = []
+        row = 0
+        x = 39
+        for label,cells in groups:
+            lines = grid_lines(cells,352-54)
+            width = max(sum(cell[2] for cell in line) for line in lines)*CELL_WIDTH/2
+            if x+15+width > 352:
+                row = max(offset+len(lines) for _,_,offset,lines in plan)
+                x = 39
+            plan.append((label,x,row,lines))
+            x += 15+width+18
+        return plan
+    label,cells = groups[0]
+    return [(label,32,0,grid_lines(cells,(321 if answer_box else 352)-62,writing_answer))]
+
 
 def draw_groups(layout,y,groups,answer_box=False,step=ROW_STEP):
-    if len(groups)>1:
-        bottom = y
-        for index,(label,cells) in enumerate(groups):
-            x = 39+index*105
-            layout.text(x,y,label,NUMBER_SIZE,'Latin')
-            bottom = max(bottom,draw_cells(layout,x+15,y,cells,x+102,step=step))
-        return bottom
-    label,cells = groups[0]
-    if label:
-        layout.text(32,y,label,NUMBER_SIZE,'Latin')
-    if answer_box:
-        layout.box(329,y-12)
-    return draw_cells(layout,62,y,cells,321 if answer_box else 352,step=step)
+    return draw_plan(layout,y,group_plan(groups,answer_box),answer_box,step)
+
+
+def draw_plan(layout,y,plan,answer_box,step):
+    for label,x,offset,lines in plan:
+        baseline = y+offset*step
+        if label:
+            layout.text(x,baseline,label,NUMBER_SIZE,'Latin')
+        if answer_box:
+            layout.box(329,baseline-12)
+        for i,line in enumerate(lines):
+            draw_grid(layout,62 if x==32 else x+15,baseline+i*step,line)
+    return y+(plan_height(plan)-1)*step
+
+
+def plan_height(plan):
+    return max(offset+len(lines) for _,_,offset,lines in plan)
+
+
+def question_blocks(rows):
+    block = []
+    for groups in rows:
+        if groups[0][0].endswith('.') and block:
+            yield block
+            block = []
+        block.append(groups)
+    if block:
+        yield block
+
+
+def draw_question_blocks(layout,rows,y,part,heading,*,step=ROW_STEP,gap=0,
+                         answer_box=False,writing_keys=None):
+    for block in question_blocks(rows):
+        plans = []
+        for groups in block:
+            label = groups[0][0]
+            blank = answer_box and label.endswith('.')
+            answer = writing_keys[int(label[:-1])] if writing_keys else ''
+            plans.append((group_plan(groups,blank,answer),blank))
+        height = sum(plan_height(plan) for plan,_ in plans)*step
+        if y+height-step > 495:
+            layout.end()
+            layout.begin(part=part,question_range=heading,continued=True)
+            y = 124
+        assert y+height-step <= 495, block
+        for plan,blank in plans:
+            y = draw_plan(layout,y,plan,blank,step)+step
+        y += gap
+
 
 def draw_components(layout,page,y):
     rows = source_rows(page)
@@ -345,7 +463,7 @@ def draw_components(layout,page,y):
         for i in range(3):
             x = 126+48*i
             layout.text(x,y+23,choices[2*i]['text'],NUMBER_SIZE,'Latin')
-            layout.pair(x+14,y+23,choices[2*i+1]['text'],ruby[i]['text'])
+            draw_cells(layout,x+14,y+23,[(choices[2*i+1]['text'],ruby[i]['text'])],x+35)
         layout.text(289,y+23,arrow['text'],BODY_SIZE)
         layout.box(316,y+1,35,32)
         y += 64
@@ -471,14 +589,12 @@ def booklet(source,raw,keys,set_number,output,examples):
                     t(62,356,examples['listening2'][0],10)
                     t(62,374,examples['listening2'][1],10)
                 else:
-                    t(62,356,examples['reading1'],10)
+                    draw_cells(layout,62,356,example_cells(examples['reading1']),321)
                 layout.box(329,343)
                 t(336.5,354,unused.pop(),9,'Latin',True)
             if page==6:
-                y = 386
-                for groups in source_cells(source[page],start=442,stop=676):
-                    y = draw_groups(layout,y,groups,answer_box=True)+26
-                assert y-26 < 501
+                draw_question_blocks(layout,source_cells(source[page],start=442,stop=676),
+                                     386,PARTS[part],heading,step=26,answer_box=True)
             else:
                 for i,n in enumerate(range(first,last+1)):
                     y=395+i*23
@@ -506,7 +622,7 @@ def booklet(source,raw,keys,set_number,output,examples):
                 t(32,y,'例',NUMBER_SIZE)
                 choice = next(iter(set('ABCDEF')-{keys[i] for i in range(31,36)}))
                 assert f'（{choice}）' in examples['reading2'][0]
-                layout.pair(62,y,*examples['reading2'])
+                y = draw_cells(layout,62,y,example_cells(*examples['reading2']),352)
                 y += 34
             elif page==8:
                 y=135
@@ -515,7 +631,7 @@ def booklet(source,raw,keys,set_number,output,examples):
                 unused = set('ABCDEF')-{keys[i] for i in range(36,41)}
                 assert len(unused)==1
                 t(32,y,'例',NUMBER_SIZE)
-                layout.pair(62,y,*examples['reading3'])
+                y = draw_cells(layout,62,y,example_cells(*examples['reading3']),321)
                 layout.box(329,y-12)
                 t(336.5,y-1,unused.pop(),NUMBER_SIZE,'Latin',True)
                 y += 31
@@ -529,13 +645,15 @@ def booklet(source,raw,keys,set_number,output,examples):
                 ]
                 for y,groups in zip((133,157,181),example):
                     draw_groups(layout,y,groups)
-                layout.mark(195,178)
+                option_plan = group_plan(example[-1])
+                _,x,_,lines = option_plan[1]
+                layout.mark(x+15+sum(cell[2] for cell in lines[0])*CELL_WIDTH/2+1,178)
                 y=208
             elif page==12:
                 t(32,145,'例',NUMBER_SIZE)
                 prefix = '日 ＋（月）→ '
                 t(62,145,prefix,BODY_SIZE)
-                layout.pair(62+pdfmetrics.stringWidth(prefix,'CN',BODY_SIZE),145,'明','míng')
+                draw_cells(layout,62+pdfmetrics.stringWidth(prefix,'CN',BODY_SIZE),145,[('明','míng')],316)
                 layout.box(316,128,35,32)
                 t(333.5,148,'明',BODY_SIZE,center=True)
                 draw_components(layout,source[page],177)
@@ -549,20 +667,10 @@ def booklet(source,raw,keys,set_number,output,examples):
                 blanks = [d['rect'] for d in source[page].get_drawings()
                           if d['rect'].width>45 and d['rect'].height==0] if page==13 else []
                 rows = source_cells(source[page],start=start,blanks=blanks)
-                for groups in rows:
-                    label = groups[0][0]
-                    if page==13:
-                        t(32,y,label,NUMBER_SIZE,'Latin')
-                        y = draw_cells(layout,62,y,groups[0][1],352,writing_answer=keys[int(label[:-1])])
-                        assert y+6 < 500, (page,y,groups)
-                        y += 55
-                    else:
-                        step = 21 if page==10 else ROW_STEP
-                        y = draw_groups(layout,y,groups,answer_box=page in (8,9) and label.endswith('.'),step=step)
-                        assert y < 500, (page,y,groups)
-                        y += step
-                        if len(groups)==3 and page in (4,5,10,11):
-                            y += 7
+                draw_question_blocks(layout,rows,y,PARTS[part],heading,
+                                     step=21 if page==10 else ROW_STEP,
+                                     gap=31 if page==13 else 7 if page in (4,5,10,11) else 0,
+                                     answer_box=page in (8,9),writing_keys=keys if page==13 else None)
         layout.end()
 
     intermediate = output.with_suffix('.tmp.pdf')
