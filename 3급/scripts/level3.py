@@ -22,7 +22,7 @@ def parse(number):
     doc = fitz.open(path)
     pages = [p.get_text(sort=True) for p in doc]
     explanations = '\n'.join(pages[7:])
-    keys = {int(n): v for n, v in re.findall(r'\b(\d+)\.\s+([A-E]|[\u4e00-\u9fff]{2})(?=\s|$)', pages[7].split('뒤쪽')[0])}
+    keys = {int(n): v for n, v in re.findall(r'\b(\d+)\.\s+([A-E]|[\u4e00-\u9fff]+)(?=\s|$)', pages[7].split('뒤쪽')[0])}
     assert len(keys) == 65, keys
     listening = {}
     pattern = r'(?ms)^\s*(\d+)\.\s+정답\s+([A-E])\s*\n(.*?)(?=^\s*\d+\.\s+정답|\Z)'
@@ -68,29 +68,30 @@ class Exam(Layout):
             stop = len(value)
             while pdfmetrics.stringWidth(value[:stop], 'CN', 10) > width:
                 stop -= 1
-            if stop < len(value) and value[stop] in '，。？！；、）':
-                stop -= 1
             if 0 < len(value) - stop <= 3:
                 stop -= 5
+            while stop < len(value) and value[stop] in '，。？！；、）':
+                stop -= 1
             self.text(x, y, value[:stop])
             value = value[stop:]
             y += step
         return y
 
     def options(self, y, values, checked=None, left=39):
-        widths = [pdfmetrics.stringWidth(v, 'CN', 10) + 19 + (17 if checked == i else 0) for i, v in enumerate(values)]
+        labels = [f'{chr(65+i)}  {value}' for i, value in enumerate(values)]
+        widths = [pdfmetrics.stringWidth(label, 'CN', 10) + 6 + (17 if checked == i else 0)
+                  for i, label in enumerate(labels)]
         available = 355-left
         if sum(widths) > available:
-            for i, value in enumerate(values):
-                self.text(left, y, f'{chr(65+i)}  {value}')
+            for i, label in enumerate(labels):
+                self.text(left, y, label)
                 if checked == i:
-                    self.mark(left + 5 + pdfmetrics.stringWidth(f'{chr(65+i)}  {value}', 'CN', 10), y-3)
+                    self.mark(left + 5 + pdfmetrics.stringWidth(label, 'CN', 10), y-3)
                 y += 17
             return y
         x = left
         remaining = available
-        for i, (value, width) in enumerate(zip(values, widths)):
-            label = f'{chr(65+i)}  {value}'
+        for i, (label, width) in enumerate(zip(labels, widths)):
             self.text(x, y, label)
             if checked == i:
                 self.mark(x + pdfmetrics.stringWidth(label, 'CN', 10) + 8, y-3)
@@ -416,14 +417,16 @@ def answer_booklet(number, data, path):
             for line in EX['listening2b' if j==3 else f'listening{part+1}']:
                 y=l.text_lines(37,y,('例：' if y==111 else '　　')+line)
             y+=10
+        # Longer dialogue pages need additional clearance above the footer.
+        gap = 8 if number != 1 and part == 1 else 10
         for n in range(start,end+1):
             for i,line in enumerate(listening[n]):
                 if i == 0:
                     y=l.numbered_text(n,y,line,x=37)
                 else:
                     y=l.text_lines(61,y,line,width=294)
-            y+=10
-        assert y<509, (j,y)
+            y+=gap
+        assert y-gap-15<503, (j,y)
         l.end()
     l.save(path)
 
@@ -440,9 +443,10 @@ def build(number):
         fn(number,data,path)
         assert path.stat().st_size<5_000_000
         with fitz.open(path) as pdf:
+            preview_label = '해설' if label == '정답및해설' and number != 1 else label
             for i,page in enumerate(pdf,1):
-                page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{label}-{i:02}.png')
-            prefix=f'제{number:02}회_{label}-'
+                page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{preview_label}-{i:02}.png')
+            prefix=f'제{number:02}회_{preview_label}-'
             for image in preview.glob(f'{prefix}*.png'):
                 suffix=image.stem.removeprefix(prefix)
                 if suffix.isdecimal() and int(suffix)>len(pdf):
