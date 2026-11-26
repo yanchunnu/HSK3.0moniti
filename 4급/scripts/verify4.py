@@ -1,5 +1,6 @@
 """Check the two exam PDFs against the original and decode all QR symbols."""
 import argparse
+import json
 from os import environ
 from pathlib import Path
 import re
@@ -41,6 +42,12 @@ def verify(level,number,tool):
         assert [int(n) for n in re.findall(r'(?m)^(\d+)\.',qtext)]==[*range(1,58), *range(65,76)]
         assert [int(n) for n in re.findall(r"（\s*(5[89]|6[0-4])\s*）",qtext)]==list(range(58,65))
         q,a=compact(qtext),compact(atext)
+        examples = json.loads(Path(__file__).with_name('例01.json').read_text(encoding='utf-8-sig'))
+        example = examples['l1b']
+        instruction = '听对话，选择正确答案。每题听一次。'
+        example_dialogue = compact('例：' + ''.join(example['lines']))
+        assert compact(instruction) + example_dialogue in q
+        assert example_dialogue in a
         blocks=[*listen.values(),*words,*fill.values(),*[v for _,_,rows in reading for _,_,v in rows]]
         content=[v for block in blocks for v in block]
         content += [p for _,p,_ in reading]+[q for _,_,rows in reading for _,q,_ in rows]

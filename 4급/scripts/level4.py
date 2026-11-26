@@ -179,7 +179,7 @@ def question_booklet(level,number,data,path):
         gap=min(19,(501-y-34*(last-first+1))/(last-first+1))
         spacing=max(5,gap-(7.5 if first>=21 else 0))
         option_step=17
-        if number != 1 or first == 1:
+        if number != 1 or first in (1, 8):
             options = sum(l.option_height(listen[n]) for n in range(first,last+1))
             group_titles = 15*sum(scopes.get(n,n)>n for n in range(first,last+1))
             if y+options+group_titles+4*(last-first+1)>507:
@@ -375,27 +375,24 @@ def answer_booklet(level,number,data,path):
         return 15*sum(1 for _ in wrap(value,RIGHT-58))
 
     examples = {1:'l1',8:'l1b',15:'l2',21:'l2b'}
-    pages = [(1,4,0),(5,7,0),(8,11,0),(12,14,0),(15,17,1),(18,20,1),
-             (21,24,1),(25,28,1),(29,32,1)]
-    if number != 1:
-        pages = []
-        for part, low, high in [(0,1,14),(1,15,32)]:
-            starts = [n for n in sorted(scopes) if low<=n<=high]
-            heights = []
-            for n in starts:
-                end = scopes[n]
-                height = sum(line_height(line) for line in transcripts[n])
-                height += sum(line_height(questions[m])+11 for m in range(n,end+1))
-                if end>n:
-                    height += 21
-                if n in examples:
-                    sample = EX[examples[n]]
-                    height += 12+sum(line_height(line) for line in sample['lines'])
-                    if 'second' in sample:
-                        height += 3+line_height(sample['second'])
-                heights.append(height)
-            pages.extend((starts[a],scopes[starts[b-1]],part)
-                         for a,b in page_ranges(heights,509-117))
+    pages = []
+    for part, low, high in [(0,1,14),(1,15,32)]:
+        starts = [n for n in sorted(scopes) if low<=n<=high]
+        heights = []
+        for n in starts:
+            end = scopes[n]
+            height = sum(line_height(line) for line in transcripts[n])
+            height += sum(line_height(questions[m])+11 for m in range(n,end+1))
+            if end>n:
+                height += 21
+            if n in examples:
+                sample = EX[examples[n]]
+                height += 12+sum(line_height(line) for line in sample['lines'])
+                if 'second' in sample:
+                    height += 3+line_height(sample['second'])
+            heights.append(height)
+        pages.extend((starts[a],scopes[starts[b-1]],part)
+                     for a,b in page_ranges(heights,509-117))
     for first,last,part in pages:
         heading('听力原文',PARTS[part]+('（续）' if first not in (1,15) else ''))
         y=117
@@ -429,9 +426,9 @@ def build(level,number):
         generate(level,number,data,path)
         assert path.stat().st_size<5_000_000
         with fitz.open(path) as pdf:
-            preview_label = '해설' if number!=1 and label=='정답및해설' else label
-            for image in preview.glob(f'제{number:02}회_{preview_label}-*.png'):
-                if image.stem.rsplit('-',1)[-1].isdecimal() and int(image.stem.rsplit('-',1)[-1])>len(pdf):
+            preview_label = '해설' if label=='정답및해설' else label
+            for image in set(preview.glob(f'제{number:02}회_{preview_label}-*.png')) | set(preview.glob(f'제{number:02}회_{label}-*.png')):
+                if image.stem.rsplit('-',1)[-1].isdecimal():
                     image.unlink()
             for i,page in enumerate(pdf,1):
                 page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{preview_label}-{i:02}.png')
