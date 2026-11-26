@@ -19,11 +19,11 @@ def extracted(path,tool,layout=False):
 def verify(level,number,tool):
     stem=Path('output')/f'HSK3.0_{level}급_제{number:02}회_'
     question,answer=(stem.with_name(stem.name+kind+'.pdf') for kind in ('문제지','정답및해설'))
-    _,keys,transcripts,asks,listen,words,fill,reading,sentences,hints,essay,writing,oral=parse(number)
+    _,keys,transcripts,asks,listen,words,fill,reading,sentences,hints,essay,writing,oral,_=parse(number)
     for path in (question,answer):
         assert path.stat().st_size<=5_000_000
         text=extracted(path,tool)
-        assert not re.search(r'[123]급|[一二三]级|level\s*=\s*[123]\b',text,re.I),path
+        assert not re.search(r'[123]급|[一二三]级|level\s*=\s*[123]\b|hsk\s*[123](?![\d.])|AI\s*생성',text,re.I),path
         with fitz.open(path) as pdf:
             assert all(len(p.get_text().strip())>35 for p in pdf)
             assert all('HSK 3.0 • '+str(level)+'급' in p.get_text() for p in pdf[1:])

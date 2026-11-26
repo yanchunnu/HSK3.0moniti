@@ -21,17 +21,21 @@ def parse(number):
     pages = raw.split('\f')
     questions = '\n'.join(pages[1:10])
     solutions = '\n'.join(pages[10:])
+    solutions = re.sub(r'(?m)^\s*(?:HSK 3\.0[^\n]*|\d+)\s*$', '', solutions)
     grid = solutions.split('빠른 정답표')[1].split('65–69')[0]
     keys = {int(n): a for n,a in re.findall(r'\b(\d{1,2})\s*([A-F])\b', grid)}
     marked = {int(n): a for n,a in re.findall(r'(?m)^\s*(\d+)\. 정답 ([A-F])',solutions)}
     assert list(sorted(keys)) == list(range(1,65))
     assert all(marked.get(n) == a for n,a in keys.items()), set(keys.items())-set(marked.items())
     transcripts = {}
+    scopes = {}
     for n,end,body in re.findall(r'(?ms)^\s*(\d+)(?:[–-](\d+))?번 · 듣기 대본\s*\n(.*?)^\s*한국어 해석',solutions):
         lines = [line.strip() for line in body.strip().splitlines()]
         transcripts[int(n)] = lines if all(re.match(r'[男女]：', line) for line in lines) else [compact(body)]
+        scopes[int(n)] = int(end or n)
     asks = {int(n): q.strip() for n,q in re.findall(r'(?m)^\s*(\d+)\. 정답 [A-D]\s*\n\s*(问：.+)',solutions) if int(n)<=32}
-    assert sorted(transcripts) == [*range(1,22),23,25,27,29,31], sorted(transcripts)
+    assert [n for start,end in sorted(scopes.items()) for n in range(start,end+1)] == list(range(1,33)), scopes
+    assert all(start == end for start,end in scopes.items() if start <= 14), scopes
     assert sorted(asks) == list(range(1,33))
     listen = {}
     for n in range(1,33):
@@ -41,7 +45,7 @@ def parse(number):
     bank = re.findall(r'(?m)^\s*(A [^\n]+ / F [^\n]+)',questions)
     words = [choices(v.replace(' / ', ' ')) for v in bank]
     fill = {}
-    for n,body in re.findall(r'(?ms)^\s*(3[3-9]|4[0-2])\. (.*?)(?=^\s*(?:\d+\.|A 提前 /|阅读 第二部分)|\Z)',questions):
+    for n,body in re.findall(r'(?ms)^\s*(3[3-9]|4[0-2])\. (.*?)(?=^\s*(?:\d+\.|A [^\n]+ / F |阅读 第二部分)|\Z)',questions):
         fill[int(n)] = tuple(line.strip() for line in body.strip().splitlines() if line.strip())
     reading = []
     for scope, body in re.findall(r'(?ms)^\s*第(4[3-9]|5[0-6](?:[–-]5[1-7])?)题\s*\n(.*?)(?=^\s*第\d+[–-]?\d*题\s*$|^\s*阅读 第三部分|\Z)', questions):
@@ -65,15 +69,19 @@ def parse(number):
     hints = dict((int(n),w) for n,w in re.findall(r'(6[5-9])\. 提示词：(\S+)', questions))
     essay = re.search(r'请写一篇不少于80字的短文，[^\n]+',questions)[0].strip()
     writing = {}
-    for n,a,b in re.findall(r'(?m)^\s*(6[5-9])\. [^\n]+\n\s*([^\n]+)\n[^\n]+\n\s*([^\n]+)', solutions):
-        writing[int(n)] = [a.strip(),b.strip()]
+    for n,body in re.findall(r'(?ms)^\s*(6[5-9])\. [^\n]+\n(.*?)(?=^\s*(?:6[5-9]\. |표현 확인:)|\Z)', solutions):
+        lines = [line.strip() for line in body.splitlines()
+                 if re.match(r'^\s*[\u3400-\u9fff]',line) and not re.search('[가-힣]',line)]
+        assert lines, n
+        writing[int(n)] = lines[:2]
     writing[70] = [compact(re.search(r'(?s)모범답안 · 한자 [^\n]+\n(.*?)한국어 해석',solutions)[1])]
     oral = {}
     for n in (71,72,73,74,75):
         segment = re.split(rf'口语 第[一二三]部分 · {n}번\s*\n',solutions)[1]
         start = {71:'낭독 대본',72:'낭독 대본',73:'사진 연결 이야기 · 2분',74:'2분 답변 모범 예시',75:'2분 답변 모범 예시'}[n]
-        end = {71:'한국어 해석',72:'한국어 해석',73:'사진 순서:',74:'구성 ',75:'구성 '}[n]
-        answer = compact(segment.split(start,1)[1].split(end,1)[0])
+        body = segment.split(start,1)[1].lstrip()
+        answer = compact(re.split(r'(?m)^.*[가-힣].*$',body,maxsplit=1)[0])
+        assert answer, n
         if n>=74:
             question = re.search(rf'(?m)^\s*{n}\. (.+)',questions)[1].strip()
             assert segment.strip().startswith(question)
@@ -81,6 +89,9 @@ def parse(number):
         else:
             oral[n] = [answer]
     assert sorted(writing)==list(range(65,71))
-    assert all(not re.search('[가-힣]',v) for data in [writing,oral,transcripts] for vs in data.values() for v in vs), oral
-    return doc, keys, transcripts, asks, listen, words, fill, reading, sentences, hints, essay, writing, oral
+    assert all(not re.search('[가-힣]',v) for data in [writing,oral,transcripts]
+               for vs in data.values() for v in vs), [
+                   (n,v[:200]) for data in [writing,oral,transcripts]
+                   for n,vs in data.items() for v in vs if re.search('[가-힣]',v)]
+    return doc, keys, transcripts, asks, listen, words, fill, reading, sentences, hints, essay, writing, oral, scopes
 

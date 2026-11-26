@@ -50,20 +50,26 @@ class Exam(Layout):
 
     def options(self,y,values,checked=None,cols=2,left=58,step=17):
         labels = [f'{chr(65+i)}  {v}' for i,v in enumerate(values)]
+        cols = self.option_columns(labels,checked,cols,left)
         cell = (RIGHT-left)/cols
-        def required(i,label):
-            return width(label)+(18 if i==checked else 0)+OPTION_GAP
-        if any(required(i,label)>cell for i,label in enumerate(labels)) and cols>1:
-            cols=1
-            cell=RIGHT-left
         for i,label in enumerate(labels):
             x=left+(i%cols)*cell
             baseline=y+(i//cols)*step
-            assert required(i,label)<=cell,(label,cell)
+            assert width(label)+(18 if i==checked else 0)+OPTION_GAP<=cell,(label,cell)
             self.text(x,baseline,label)
             if i==checked:
                 self.mark(x+width(label)+8,baseline-3)
         return y+((len(labels)+cols-1)//cols)*step
+
+    def option_columns(self,labels,checked,cols,left):
+        fits = all(width(label)+(18 if i==checked else 0)+OPTION_GAP <= (RIGHT-left)/cols
+                   for i,label in enumerate(labels))
+        return cols if fits else 1
+
+    def option_height(self,values,cols=2,left=58,step=17):
+        labels = [f'{chr(65+i)}  {v}' for i,v in enumerate(values)]
+        cols = self.option_columns(labels,None,cols,left)
+        return ((len(labels)+cols-1)//cols)*step
 
     def divider(self,section):
         self.begin()
@@ -143,7 +149,7 @@ def cover_and_table(l):
     l.end()
 
 def question_booklet(level,number,data,path):
-    doc,_,_,_,listen,words,fill,reading,sentences,hints,essay,_,oral=data
+    doc,_,_,_,listen,words,fill,reading,sentences,hints,essay,_,oral,scopes=data
     l=Exam(number,level=level)
     t=l.text
     cover_and_table(l)
@@ -157,12 +163,30 @@ def question_booklet(level,number,data,path):
         if example:
             y=l.example_listening(y,EX[example],True)
         gap=min(19,(501-y-34*(last-first+1))/(last-first+1))
+        spacing=max(5,gap-(7.5 if first>=21 else 0))
+        option_step=17
+        if number != 1:
+            options = sum(l.option_height(listen[n]) for n in range(first,last+1))
+            group_titles = 15*sum(scopes.get(n,n)>n for n in range(first,last+1))
+            if y+options+group_titles+4*(last-first+1)>507:
+                option_step=15
+                options = sum(l.option_height(listen[n],step=option_step) for n in range(first,last+1))
+            spacing = max(4,min(spacing,(507-y-options-group_titles)/(last-first+1)))
         for n in range(first,last+1):
-            if n>=21 and n%2:
-                t(33,y,f'第{n}-{n+1}题')
+            if n in scopes:
+                height = sum(l.option_height(listen[m],step=option_step)+spacing for m in range(n,scopes[n]+1))
+                if scopes[n]>n:
+                    height+=15
+                if y+height>=509:
+                    l.end()
+                    l.begin('',PARTS[part],(1,14) if part==0 else (15,32),continued=True)
+                    t(33,114,('听对话，选择正确答案。' if part==0 else '听短文，选择正确答案。')+'每题听一次。')
+                    y=135
+            if scopes.get(n,n)>n:
+                t(33,y,f'第{n}-{scopes[n]}题')
                 y+=15
             t(33,y,f'{n}.')
-            y=l.options(y,listen[n])+max(5,gap-(7.5 if first>=21 else 0))
+            y=l.options(y,listen[n],step=option_step)+spacing
         assert y<515,(first,y)
         l.end()
     l.divider('阅读')
@@ -185,15 +209,43 @@ def question_booklet(level,number,data,path):
                 y=l.numbered(n,y,line) if i==0 else l.paragraph(y,line,x=58)
             y+=27 if j==0 else 16
         l.end()
-    for start,end in [(0,3),(3,7),(7,9),(9,11)]:
+    def reading_height(block):
+        _,passage,rows = block
+        return (17 if len(rows)>1 else 0)+14*sum(1 for _ in wrap(passage,RIGHT-36))+6+sum(
+            15*sum(1 for _ in wrap('★ '+question,RIGHT-58))+l.option_height(values,step=15)+4
+            for _,question,values in rows)
+
+    def reading_example(y):
+        ex=EX['r2']
+        y=l.paragraph(y,'例：'+ex['passage'])
+        y=l.paragraph(y,'★ '+ex['question'],x=58)
+        return l.options(y,ex['options'],ex['key'],step=15)+11
+
+    ranges = [(0,3),(3,7),(7,9),(9,11)]
+    if number != 1:
+        heights = [reading_height(block) for block in reading]
+        ex = EX['r2']
+        example_height = (15*sum(1 for _ in wrap('例：'+ex['passage'],RIGHT-36))+
+                          15*sum(1 for _ in wrap('★ '+ex['question'],RIGHT-58))+
+                          l.option_height(ex['options'],step=15)+11)
+        best = {len(reading): (0,0,[])}
+        for start in reversed(range(len(reading))):
+            available = 509-126-(example_height if start==0 else 0)
+            candidates = []
+            for end in range(start+1,len(reading)+1):
+                spare = available-sum(heights[start:end])
+                if spare>=0 and end in best:
+                    pages,cost,tail = best[end]
+                    candidates.append((pages+1,cost+spare**2,[(start,end),*tail]))
+            if candidates:
+                best[start] = min(candidates)
+        ranges = best[0][2]
+    for start,end in ranges:
         l.begin('',PARTS[1],(43,57),continued=bool(start))
         t(33,111,'阅读短文，选出正确答案。')
         y=126
         if start==0:
-            ex=EX['r2']
-            y=l.paragraph(y,'例：'+ex['passage'])
-            y=l.paragraph(y,'★ '+ex['question'],x=58)
-            y=l.options(y,ex['options'],ex['key'],step=15)+11
+            y=reading_example(y)
         for scope,passage,rows in reading[start:end]:
             if len(rows)>1:
                 t(33,y,'第'+scope.replace('–','-')+'题')
@@ -276,7 +328,7 @@ def question_booklet(level,number,data,path):
     l.save(path)
 
 def answer_booklet(level,number,data,path):
-    _,keys,transcripts,questions,*_,writing,oral=data
+    _,keys,transcripts,questions,*_,writing,oral,scopes=data
     l=Exam(number,level=level,page_offset=0)
     t=l.text
     def heading(value,part=''):
@@ -295,7 +347,9 @@ def answer_booklet(level,number,data,path):
     y=144
     for n in range(65,70):
         y=l.numbered(n,y,writing[n][0])
-        y=l.paragraph(y,writing[n][1],x=58)+4
+        for alternative in writing[n][1:]:
+            y=l.paragraph(y,alternative,x=58)
+        y+=4
     t(33,y+13,'第二部分　写短文',13)
     y=l.numbered(70,y+39,writing[70][0])
     l.end()
@@ -324,8 +378,8 @@ def answer_booklet(level,number,data,path):
         for n in range(first,last+1):
             if n in transcripts:
                 lines=transcripts[n]
-                if n>=21:
-                    t(33,y,f'第{n}-{n+1}题')
+                if scopes[n]>n:
+                    t(33,y,f'第{n}-{scopes[n]}题')
                     y+=17
                     for line in lines:
                         y=l.paragraph(y,line,x=58)
@@ -333,7 +387,7 @@ def answer_booklet(level,number,data,path):
                 else:
                     for i,line in enumerate(lines):
                         y=l.numbered(n,y,line) if i==0 else l.paragraph(y,line,x=58)
-            y=l.numbered(n,y,questions[n]) if n>=21 else l.paragraph(y,questions[n],x=58)
+            y=l.numbered(n,y,questions[n]) if scopes.get(n)!=n else l.paragraph(y,questions[n],x=58)
             y+=11
         assert y<516,(first,y)
         l.end()
@@ -349,11 +403,12 @@ def build(level,number):
         generate(level,number,data,path)
         assert path.stat().st_size<5_000_000
         with fitz.open(path) as pdf:
-            for image in preview.glob(f'제{number:02}회_{label}-*.png'):
+            preview_label = '해설' if number!=1 and label=='정답및해설' else label
+            for image in preview.glob(f'제{number:02}회_{preview_label}-*.png'):
                 if image.stem.rsplit('-',1)[-1].isdecimal() and int(image.stem.rsplit('-',1)[-1])>len(pdf):
                     image.unlink()
             for i,page in enumerate(pdf,1):
-                page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{label}-{i:02}.png')
+                page.get_pixmap(matrix=fitz.Matrix(1.3,1.3)).save(preview/f'제{number:02}회_{preview_label}-{i:02}.png')
             print(label,len(pdf),path.stat().st_size)
 
 def main():

@@ -19,7 +19,7 @@ def chinese(n):
     tens, ones = divmod(n, 10)
     return (DIGITS[tens] if tens > 1 else '') + '十' + (DIGITS[ones] if ones else '')
 
-def listening_events(level, number, blocks, questions):
+def listening_events(level, number, blocks, questions, scopes):
     grade = chinese(level) + '级'
     welcome = f'大家好！欢迎参加HSK{grade}考试。'
     intro = [('f', text, gap) for text, gap in [
@@ -38,7 +38,17 @@ def listening_events(level, number, blocks, questions):
             next_gap = 1.85 if i+1<len(lines) and lines[i+1].startswith('问：') else 1.05
             events.append((voice,sentence if prefix in ('女','男','问') else line,
                            gap if i+1==len(lines) else next_gap))
-    for part, first, last, example in [(0,1,7,'l1'),(0,8,14,'l1b'),(1,15,20,'l2'),(1,21,32,'l2b')]:
+    sections = [(0,1,7,'l1'),(0,8,14,'l1b')]
+    for first,end in sorted(scopes.items()):
+        if first < 15:
+            continue
+        example = 'l2b' if end>first else 'l2'
+        if sections[-1][3] == example:
+            part,start,_,_ = sections[-1]
+            sections[-1] = (part,start,end,example)
+        else:
+            sections.append((1,first,end,example))
+    for part, first, last, example in sections:
         events = parts[part]
         if first in (1,15):
             announce(events,('第一部分。','第二部分。')[part],1.3)
@@ -50,18 +60,18 @@ def listening_events(level, number, blocks, questions):
         speak(events,sample['lines'],1,1.8)
         if 'second' in sample:
             speak(events,[sample['second']],1,2.2)
-        limit = first+1 if first==21 else first
+        limit = scopes[first]
         tail = f'到{chinese(limit)}' if limit!=first else ''
         announce(events,f'现在开始第{chinese(first)}{tail}题。')
-        step = 2 if first==21 else 1
-        for n in range(first,last+1,step):
-            if step==1:
+        for n in sorted(start for start in scopes if first<=start<=last):
+            end = scopes[n]
+            if end==n:
                 announce(events,chinese(n)+'。')
                 speak(events,blocks[n]+[questions[n]],n,15)
             else:
-                announce(events,f'第{chinese(n)}到{chinese(n+1)}题。')
+                announce(events,f'第{chinese(n)}到{chinese(end)}题。')
                 speak(events,blocks[n],n,1.85)
-                for m in (n,n+1):
+                for m in range(n,end+1):
                     announce(events,chinese(m)+'。',1.2)
                     speak(events,[questions[m]],m,15)
     return intro, parts
@@ -82,8 +92,8 @@ def speaking_events(oral):
 
 def build(level, number, model):
     data=parse(number)
-    intro, parts=listening_events(level,number,data[2],data[3])
-    speaking=speaking_events(data[-1])
+    intro, parts=listening_events(level,number,data[2],data[3],data[-1])
+    speaking=speaking_events(data[-2])
     transition=[('f','听力考试结束。下面进行口语考试。',2.0)]
     full=[*intro,*sum(parts,[]),*transition,*speaking]
     clips={key:trim(path) for key,path in asyncio.run(synthesize(full,Path('tmp/tts'))).items()}
@@ -125,6 +135,9 @@ def build(level, number, model):
             print(label,tallies[label],flush=True)
     Path('tmp').mkdir(exist_ok=True)
     Path('tmp/audio-stats.json').write_text(json.dumps(tallies,ensure_ascii=False),encoding='utf8')
+    if number != 1:
+        Path(f'tmp/audio-stats-{number:02}.json').write_text(
+            json.dumps(tallies,ensure_ascii=False),encoding='utf8')
 
 
 
