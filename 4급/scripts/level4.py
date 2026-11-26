@@ -169,8 +169,8 @@ def question_booklet(level,number,data,path):
     cover_and_table(l)
     for first,last,part,example in [(1,7,0,'l1'),(8,14,0,'l1b'),(15,20,1,'l2'),
                                      (21,24,1,'l2b'),(25,32,1,None)]:
-        l.begin('一、听力' if first==1 else '',PARTS[part],(1,14) if part==0 else (15,32),
-                continued=first not in (1,15))
+        l.begin('一、听力' if first==1 else '',PARTS[part],(first,last) if part==0 else (15,32),
+                continued=part==1 and first!=15)
         y=126 if first==1 else 114
         t(33,y,('听对话，选择正确答案。' if part==0 else '听短文，选择正确答案。')+'每题听一次。')
         y+=21
@@ -196,7 +196,7 @@ def question_booklet(level,number,data,path):
                     height+=15
                 if y+height>=509:
                     l.end()
-                    l.begin('',PARTS[part],(1,14) if part==0 else (15,32),continued=True)
+                    l.begin('',PARTS[part],(n,last) if part==0 else (15,32),continued=part==1)
                     t(33,114,('听对话，选择正确答案。' if part==0 else '听短文，选择正确答案。')+'每题听一次。')
                     y=135
             if scopes.get(n,n)>n:
