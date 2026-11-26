@@ -48,11 +48,14 @@ def verify(level,number,tool):
         for value in content:
             assert compact(value) in q,value
         for value in [*asks.values(),*[v for lines in transcripts.values() for v in lines],
-                      *[values[0] for values in writing.values()],*[v for lines in oral.values() for v in lines]]:
+                      *[v for values in writing.values() for v in values],*[v for lines in oral.values() for v in lines]]:
             assert compact(value) in a,value
         assert all(compact(oral[n][-1]) not in q for n in oral)
-        first=compact(adoc[0].get_text())
-        assert all(f'{n}.{key}' in first for n,key in keys.items())
+        answer_rows=re.findall(r'(?m)^(\d+)\.\s*\n([A-F])$',adoc[0].get_text())
+        assert [(int(n),key) for n,key in answer_rows]==sorted(keys.items())
+        writing_page, = [page for page in qdoc if '第65-69题' in page.get_text()]
+        assert re.findall(r'(?m)^(6[5-9])\.',writing_page.get_text())==['65','66','67','68','69']
+        assert '例：' in writing_page.get_text()
         # Korean is confined to the requested running header.
         header=f'HSK 3.0 • {level}급 제{number}회 모의고사'
         assert not re.search('[가-힣]',atext.replace(header,''))
