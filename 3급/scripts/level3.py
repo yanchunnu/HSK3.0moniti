@@ -15,6 +15,9 @@ from booklet import Layout, PARTS, writing_syllables
 
 EX = json.loads(Path(__file__).with_name('例01.json').read_text(encoding='utf8'))
 BLANK = '（　　）'
+# A4 scaling turns 14 layout units into approximately 21.8 pt.
+OPTION_GAP = 14
+OPTION_STACK_STEP = 17
 
 
 def parse(number):
@@ -77,28 +80,46 @@ class Exam(Layout):
             y += step
         return y
 
-    def options(self, y, values, checked=None, left=39):
-        labels = [f'{chr(65+i)}  {value}' for i, value in enumerate(values)]
-        widths = [pdfmetrics.stringWidth(label, 'CN', 10) + 6 + (17 if checked == i else 0)
-                  for i, label in enumerate(labels)]
+    def option_labels(self, values, first_letter='A'):
+        labels = [f'{chr(ord(first_letter)+i)}  {value}' for i, value in enumerate(values)]
+        widths = [pdfmetrics.stringWidth(label, 'CN', 10) for label in labels]
+        return labels, widths
+
+    def option_slots(self, widths, checked):
+        return tuple(width + (18 if checked == i else 0)
+                     + (OPTION_GAP if i < len(widths)-1 else 0)
+                     for i, width in enumerate(widths))
+
+    def option_columns(self, rows, left):
         available = 355-left
-        if sum(widths) > available:
-            for i, label in enumerate(labels):
-                self.text(left, y, label)
-                if checked == i:
-                    self.mark(left + 5 + pdfmetrics.stringWidth(label, 'CN', 10), y-3)
-                y += 17
-            return y
-        x = left
-        remaining = available
+        default = available/3
+        slots = [self.option_slots(self.option_labels(values)[1], checked)
+                 for values, checked in rows]
+        # Keep the most rows horizontal on one shared grid, preferring the equal grid on ties.
+        candidates = ((a, b, available-a-b)
+                      for a in {default, *(row[0] for row in slots)}
+                      for b in {default, *(row[1] for row in slots)}
+                      if a+b < available)
+
+        def score(columns):
+            fits = sum(all(need <= have for need, have in zip(row, columns)) for row in slots)
+            a, b, _ = columns
+            return (-fits, abs(a-default) + abs(a+b-2*default), a, b)
+
+        columns = min(candidates, key=score)
+        return columns, len(rows) + score(columns)[0]
+
+    def options(self, y, values, checked=None, left=39, first_letter='A', row_step=16, columns=None):
+        labels, widths = self.option_labels(values, first_letter)
+        columns = columns or ((355-left)/3,) * 3
+        inline = all(need <= have for need, have in zip(self.option_slots(widths, checked), columns))
         for i, (label, width) in enumerate(zip(labels, widths)):
-            self.text(x, y, label)
+            x = left + sum(columns[:i]) if inline else left
+            baseline = y if inline else y + i*OPTION_STACK_STEP
+            self.text(x, baseline, label)
             if checked == i:
-                self.mark(x + pdfmetrics.stringWidth(label, 'CN', 10) + 8, y-3)
-            slot = max(width, min(available/3, remaining - sum(widths[i+1:])))
-            x += slot
-            remaining -= slot
-        return y + 16
+                self.mark(x + width + 8, baseline-3)
+        return y + row_step + (0 if inline else (len(labels)-1)*OPTION_STACK_STEP)
 
 
 def pictures(doc, page):
@@ -220,26 +241,36 @@ def booklet(number, data, path):
             l.box(56+i*64,y+190,15,15)
         l.end()
 
-    for j in (1,2):
-        first=11+(j-1)*10
-        l.begin('',PARTS[j],(first,first+9))
-        t(32,110,'听对话和问题，选择正确答案。' if j==1 else '听短文和问题，选择正确答案。')
+    listening_pages = [
+        (11, 16, 'listening2', ['九点','十点','十一点'], 1, 10),
+        (16, 21, 'listening2b', ['书包里','门口的桌子上','窗户旁边'], 1, 14),
+        (21, 31, 'listening3', ['看报纸','吃晚饭','搬桌子'], 0, 10),
+    ]
+    for first, end, example, example_choices, checked, example_gap in listening_pages:
+        dialogue = first < 21
+        part = 1 if dialogue else 2
+        start = 11 if dialogue else 21
+        l.begin('',PARTS[part],(start,start+9),continued=first==16)
+        t(32,110,'听对话和问题，选择正确答案。' if dialogue else '听短文和问题，选择正确答案。')
         y=132
-        for i,line in enumerate(EX[f'listening{j+1}']):
+        for i,line in enumerate(EX[example]):
             y=l.text_lines(36,y,('例：' if i==0 else '　　')+line)
-        y=l.options(y+3,['九点','十点','十一点'] if j==1 else ['看报纸','吃晚饭','搬桌子'],1 if j==1 else 0)+10
-        for n in range(first,first+10):
+        questions = []
+        for n in range(first,end):
             row=re.search(rf'(?m)^\s*{n}\.\s+A\s+(.+?)\s+B\s+(.+?)\s+C\s+(.+)$',pages[2])
-            if j == 1 and n == 16:
-                l.end()
-                l.begin('',PARTS[j],(11,20),continued=True)
-                t(32,110,'听对话和问题，选择正确答案。')
-                y=132
-                for i,line in enumerate(EX['listening2b']):
-                    y=l.text_lines(36,y,('例：' if i==0 else '　　')+line)
-                y=l.options(y+3,['书包里','门口的桌子上','窗户旁边'],1)+14
+            questions.append((n, row.groups()))
+        rows = [(example_choices, checked), *((values, None) for _, values in questions)]
+        columns, stacked = l.option_columns(rows, left=58)
+        example_baseline = y + 3
+        example_end = l.options(example_baseline,example_choices,checked,left=58,columns=columns)
+        stack_height = 2*OPTION_STACK_STEP*stacked - (example_end-example_baseline-16)
+        y = example_end + example_gap
+        # Reclaim only inter-question whitespace if the stacked rows need extra height.
+        row_step = min(21, (508-y-stack_height)/len(questions))
+        assert row_step >= 17, (number, first, row_step)
+        for n, values in questions:
             t(32,y,f'{n}.')
-            y=l.options(y,list(row.groups()),left=58)+5
+            y=l.options(y,values,left=58,row_step=row_step,columns=columns)
         assert y<509
         l.end()
 
@@ -288,9 +319,7 @@ def booklet(number, data, path):
             choices.append(EX['reading2'][0])
         y=142
         for i in range(0,len(choices),3):
-            for k,value in enumerate(choices[i:i+3]):
-                t(39+106*k,y,f'{chr(65+i+k)}  {value}')
-            y+=21
+            y=l.options(y,choices[i:i+3],first_letter=chr(65+i),row_step=21)
         if j==0:
             t(39,y+10,'例：'+EX['reading2'][1].replace(BLANK,'（F）'))
             l.mark(39+pdfmetrics.stringWidth('例：'+EX['reading2'][1].replace(BLANK,'（F）'),'CN',10)+9,y+7)
@@ -306,15 +335,20 @@ def booklet(number, data, path):
     for j,(start,end) in enumerate(((0,3),(3,7),(7,10))):
         l.begin('',PARTS[2],(51,60),continued=bool(j))
         t(32,111,'阅读短文，选出正确答案。')
+        example_choices = ['下了雪','刮了大风','非常热']
+        rows = [(row[3:], None) for row in reading[start:end]]
+        if j == 0:
+            rows.insert(0, (example_choices, 1))
+        columns, _ = l.option_columns(rows, left=39)
         y=138
         if j==0:
             y=l.text_lines(36,y,'例：'+EX['reading3'][0])
             y=l.text_lines(43,y,'★ '+EX['reading3'][1])
-            y=l.options(y,['下了雪','刮了大风','非常热'],1)+14
+            y=l.options(y,example_choices,1,columns=columns)+14
         for n,passage,question,*values in reading[start:end]:
             y=l.text_lines(36,y,f'{n}.  '+re.sub(r'\s+','',passage))
             y=l.text_lines(43,y,'★ '+question)
-            y=l.options(y,values)+17
+            y=l.options(y,values,columns=columns)+17
         assert y<509
         l.end()
 
@@ -431,14 +465,17 @@ def answer_booklet(number, data, path):
     l.save(path)
 
 
-def build(number):
+def build(number, questions_only=False):
     data=parse(number)
     stem=f'HSK3.0_3급_제{number:02}회_'
     out=Path('output')
     out.mkdir(exist_ok=True)
     preview=out/'preview'
     preview.mkdir(exist_ok=True)
-    for label,fn in [('문제지',booklet),('정답및해설',answer_booklet)]:
+    booklets = [('문제지', booklet)]
+    if not questions_only:
+        booklets.append(('정답및해설', answer_booklet))
+    for label,fn in booklets:
         path=out/(stem+label+'.pdf')
         fn(number,data,path)
         assert path.stat().st_size<5_000_000
@@ -451,6 +488,8 @@ def build(number):
                 suffix=image.stem.removeprefix(prefix)
                 if suffix.isdecimal() and int(suffix)>len(pdf):
                     image.unlink()
+            if label == '문제지':
+                assert len(pdf) == 21, (number, len(pdf))
             print(label,len(pdf),path.stat().st_size)
 
 

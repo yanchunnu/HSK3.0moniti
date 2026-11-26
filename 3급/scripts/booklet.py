@@ -829,6 +829,7 @@ def main():
     parser.add_argument('set_number',type=int,nargs='?',choices=range(1,11))
     parser.add_argument('--level',type=int,choices=(2,3),default=2)
     parser.add_argument('--set',dest='named_set',type=int,choices=range(1,11))
+    parser.add_argument('--questions-only', action='store_true', help='build only the level 3 question booklet')
     parser.add_argument('--examples',type=Path,help='JSON with set-specific examples for the unused options')
     args=parser.parse_args()
     args.set_number = args.named_set or args.set_number
@@ -836,7 +837,9 @@ def main():
         parser.error('supply --set N')
     if args.level == 3:
         from level3 import build
-        return build(args.set_number)
+        return build(args.set_number, questions_only=args.questions_only)
+    if args.questions_only:
+        parser.error('--questions-only requires --level 3')
     if args.set_number != 1 and args.examples is None:
         parser.error('supply --examples for the selected source photos and options')
     examples=json.loads(args.examples.read_text(encoding='utf8')) if args.examples else SAMPLE_EXAMPLES
