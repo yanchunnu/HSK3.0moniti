@@ -58,9 +58,9 @@ class Exam(Layout):
             y += step
         return y
 
-    def numbered(self,n,y,value):
+    def numbered(self,n,y,value,step=15):
         self.text(33,y,f'{n}.')
-        return self.paragraph(y,value,x=58)
+        return self.paragraph(y,value,x=58,step=step)
 
     def options(self,y,values,checked=None,cols=2,left=58,step=17):
         labels = [f'{chr(65+i)}  {v}' for i,v in enumerate(values)]
@@ -93,15 +93,15 @@ class Exam(Layout):
         self.line(47,310,335,310)
         self.end()
 
-    def example_listening(self,y,sample,show_options):
+    def example_listening(self,y,sample,show_options,step=15):
         for i,line in enumerate(sample['lines']):
             if i==0:
                 self.text(33,y,'例：')
-            y=self.paragraph(y,line,x=58)
+            y=self.paragraph(y,line,x=58,step=step)
         if show_options:
             y=self.options(y+2,sample['options'],sample['key'])
         if 'second' in sample:
-            y=self.paragraph(y+3,sample['second'],x=58)
+            y=self.paragraph(y+3,sample['second'],x=58,step=step)
             if show_options:
                 y=self.options(y,sample['secondOptions'],sample['secondKey'])
         return y+12
@@ -223,10 +223,13 @@ def question_booklet(level,number,data,path):
                 y=l.numbered(n,y,line) if i==0 else l.paragraph(y,line,x=58)
             y+=27 if j==0 else 16
         l.end()
+    reading_step = 13 if number >= 5 else 14
+    reading_option_step = 13 if number >= 5 else 15
+
     def reading_height(block):
         _,passage,rows = block
-        return (17 if len(rows)>1 else 0)+14*sum(1 for _ in wrap(passage,RIGHT-36))+6+sum(
-            15*sum(1 for _ in wrap('★ '+question,RIGHT-58))+l.option_height(values,step=15)+4
+        return (17 if len(rows)>1 else 0)+reading_step*sum(1 for _ in wrap(passage,RIGHT-36))+6+sum(
+            15*sum(1 for _ in wrap('★ '+question,RIGHT-58))+l.option_height(values,step=reading_option_step)+4
             for _,question,values in rows)
 
     def reading_example(y):
@@ -253,10 +256,10 @@ def question_booklet(level,number,data,path):
             if len(rows)>1:
                 t(33,y,'第'+scope.replace('–','-')+'题')
                 y+=17
-            y=l.paragraph(y,passage,step=14)
+            y=l.paragraph(y,passage,step=reading_step)
             for n,question,values in rows:
                 y=l.numbered(n,y,'★ '+question)
-                y=l.options(y,values,step=15)+4
+                y=l.options(y,values,step=reading_option_step)+4
             y+=6
         assert y<=516,(start,y)
         l.end()
@@ -371,8 +374,10 @@ def answer_booklet(level,number,data,path):
         y=l.paragraph(y,oral[n][1],x=58,step=13)+13
     assert y<516,y
     l.end()
+    transcript_step = 13 if number >= 5 else 15
+
     def line_height(value):
-        return 15*sum(1 for _ in wrap(value,RIGHT-58))
+        return transcript_step*sum(1 for _ in wrap(value,RIGHT-58))
 
     examples = {1:'l1',8:'l1b',15:'l2',21:'l2b'}
     pages = []
@@ -398,19 +403,19 @@ def answer_booklet(level,number,data,path):
         y=117
         for n in range(first,last+1):
             if n in examples:
-                y=l.example_listening(y,EX[examples[n]],False)
+                y=l.example_listening(y,EX[examples[n]],False,step=transcript_step)
             if n in transcripts:
                 lines=transcripts[n]
                 if scopes[n]>n:
                     t(33,y,f'第{n}-{scopes[n]}题')
                     y+=17
                     for line in lines:
-                        y=l.paragraph(y,line,x=58)
+                        y=l.paragraph(y,line,x=58,step=transcript_step)
                     y+=4
                 else:
                     for i,line in enumerate(lines):
-                        y=l.numbered(n,y,line) if i==0 else l.paragraph(y,line,x=58)
-            y=l.numbered(n,y,questions[n]) if scopes.get(n)!=n else l.paragraph(y,questions[n],x=58)
+                        y=l.numbered(n,y,line,step=transcript_step) if i==0 else l.paragraph(y,line,x=58,step=transcript_step)
+            y=l.numbered(n,y,questions[n],step=transcript_step) if scopes.get(n)!=n else l.paragraph(y,questions[n],x=58,step=transcript_step)
             y+=11
         assert y<516,(first,y)
         l.end()
