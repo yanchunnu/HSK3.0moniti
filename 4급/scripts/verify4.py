@@ -22,13 +22,15 @@ def verify(level,number,tool):
     stem=Path('output')/f'HSK3.0_{level}급_제{number:02}회_'
     question,answer=(stem.with_name(stem.name+kind+'.pdf') for kind in ('문제지','정답및해설'))
     _,keys,transcripts,asks,listen,words,fill,reading,sentences,hints,essay,writing,oral,_=load(number)
+    header = f'HSK 3.0 • {level}급 제{number}회 모의고사'
     for path in (question,answer):
         assert path.stat().st_size<=5_000_000
         text=extracted(path,tool)
-        assert not re.search(r'[123]급|[一二三]级|level\s*=\s*[123]\b|hsk\s*[123](?![\d.])|AI\s*생성',text,re.I),path
+        assert not re.search(r'[12356789]급|[一二三五六七八九]级|level\s*=\s*[12356789]\b|hsk\s*[12356789](?![\d.])|AI\s*생성|답안\s*카드|答题卡',text,re.I),path
         with fitz.open(path) as pdf:
             assert all(len(p.get_text().strip())>35 for p in pdf)
-            assert all('HSK 3.0 • '+str(level)+'급' in p.get_text() for p in pdf[1:])
+            pages_with_header = pdf[1:] if path == question else pdf
+            assert all(p.get_text().splitlines()[0] == header for p in pages_with_header)
             symbols=[]
             for i,page in enumerate(pdf):
                 p=page.get_pixmap(matrix=fitz.Matrix(1.2,1.2))
@@ -65,7 +67,6 @@ def verify(level,number,tool):
         assert re.findall(r'(?m)^(6[5-9])\.',writing_page.get_text())==['65','66','67','68','69']
         assert '例：' in writing_page.get_text()
         # Korean is confined to the requested running header.
-        header=f'HSK 3.0 • {level}급 제{number}회 모의고사'
         assert not re.search('[가-힣]',atext.replace(header,''))
     print('문항 75개, 객관식 정답 64개, 쓰기·말하기 답안, 듣기 원문, 표지 QR 검사 통과')
     gap,rows,count=measure(question,tool)
