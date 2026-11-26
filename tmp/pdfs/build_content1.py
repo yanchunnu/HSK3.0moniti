@@ -176,7 +176,9 @@ def draw_page(pdf, rendered, clips, parts, photos, page_no, scale, gaps):
         if 'original' not in item:
             draw_crop(pdf, rendered, clip, None)
         else:
-            gap = draw_item(pdf, part, item, x, y, scale)
+            # Match the baseline of the neighboring source crops on mixed pages.
+            mixed = any('original' not in row for row in data['items'])
+            gap = draw_item(pdf, part, item, x, y-1.5 if mixed else y, scale)
             if gap is not None:
                 gaps.append(gap)
 
