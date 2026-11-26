@@ -40,11 +40,14 @@ PINYIN_SIZE = 7
 NUMBER_SIZE = 9
 RUBY_OFFSET = 11
 ROW_STEP = 24
-CELL_WIDTH = 28 / (595.276 / 382)
+PAGE_SCALE = 595.276 / 382
+CELL_WIDTH = 28 / PAGE_SCALE
 OPTION_LEFT = 39
 OPTION_RIGHT = 352
 OPTION_COLUMN = (OPTION_RIGHT - OPTION_LEFT) / 3
 OPTION_INSET = 15
+# A small allowance keeps the rounded PDF coordinates above the threshold.
+OPTION_MIN_GAP = 20.01 / PAGE_SCALE
 RUBY_SCALE = 0.73
 HALF_PUNCTUATION = '，。？！、：；（）,.?!:;'
 CLOSING_PUNCTUATION = '，。？！、：；）,.?!:;'
@@ -98,13 +101,13 @@ def photos(raw,page):
             yield fitz.Rect(x,height-y-h,x+w,height-y)
 
 
-def replacement_photo(path,clip,size):
+def replacement_photo(path,clip,size,*,crop_x=0.5):
     with Image.open(path) as photo:
         photo = ImageOps.exif_transpose(photo).convert('RGB')
     ratio = clip.width/clip.height
     width = min(photo.width,photo.height*ratio)
     height = width/ratio
-    left,top = (photo.width-width)/2,(photo.height-height)/2
+    left,top = (photo.width-width)*crop_x,(photo.height-height)/2
     box = (max(0,left),max(0,top),min(photo.width,left+width),min(photo.height,top+height))
     return photo.resize(size,Image.Resampling.LANCZOS,box=box)
 
@@ -219,7 +222,8 @@ class Layout:
         pix = source[page].get_pixmap(matrix=fitz.Matrix(2,2),clip=clip,alpha=False)
         im = Image.frombytes('RGB',(pix.width,pix.height),pix.samples)
         if replacement is not None:
-            im = replacement_photo(replacement,clip,im.size)
+            im = replacement_photo(replacement['image'],clip,im.size,
+                                   crop_x=replacement.get('crop_x',0.5))
         im.thumbnail((1200,1200))
         encoded = BytesIO()
         im.save(encoded,'JPEG',quality=85,optimize=True)
@@ -436,40 +440,75 @@ def draw_cells(layout,x,y,cells,right,writing_answer='',show_answer=False,step=R
     return y+index*step
 
 
+def option_text_right(line):
+    """Right edge of the printed text, relative to the option label."""
+    x = right = OPTION_INSET
+    for han,_,units,_ in line:
+        width = units*CELL_WIDTH/2
+        if han:
+            right = max(right,x+(width+pdfmetrics.stringWidth(han,'CN',BODY_SIZE))/2)
+        x += width
+    return right
+
+
+def option_widths(groups,padding):
+    half_cell = CELL_WIDTH/2
+    counts = [sum(cell[2] for word in grid_words(cells,'') for cell in word)
+              for _,cells in groups]
+    if all(pad+count*half_cell <= OPTION_COLUMN for pad,count in zip(padding,counts)):
+        return [OPTION_COLUMN]*3
+
+    available = OPTION_RIGHT-OPTION_LEFT
+    capacity = int((available-sum(padding))/half_cell)
+    # Try grid-aligned widths, preferring fewer wrapped options.
+    min_cells = 4
+    heights_by_width = [
+        [len(grid_lines(cells,size*half_cell)) for size in range(min_cells,max(min_cells,count)+1)]
+        for (_,cells),count in zip(groups,counts)]
+    best = None
+    for a in range(min_cells,capacity-2*min_cells+1):
+        for b in range(min_cells,capacity-a-min_cells+1):
+            sizes = a,b,capacity-a-b
+            heights = [options[min(size-min_cells,len(options)-1)]
+                       for size,options in zip(sizes,heights_by_width)]
+            score = max(heights),sum(heights),sum((3*size-capacity)**2 for size in sizes)
+            if best is None or score < best[0]:
+                best = score,sizes
+    widths = [pad+size*half_cell for pad,size in zip(padding,best[1])]
+    slack = (available-sum(widths))/3
+    return [width+slack for width in widths]
+
+
 def group_plan(groups,answer_box=False,writing_answer='',*,checked=None):
     if [label for label,_ in groups] == list('ABC'):
         padding = [OPTION_INSET+(16 if label==checked else 4) for label,_ in groups]
         widths = [OPTION_COLUMN]*3
         if checked is None:
-            required = [pad+sum(cell[2] for word in grid_words(cells,'') for cell in word)*CELL_WIDTH/2
-                        for pad,(_,cells) in zip(padding,groups)]
-            if max(required) > OPTION_COLUMN:
-                available = OPTION_RIGHT-OPTION_LEFT
-                half_cell = CELL_WIDTH/2
-                capacity = int((available-sum(padding))/half_cell)
-                # Try grid-aligned widths, preferring fewer wrapped options.
-                min_cells = 4
-                choices = []
-                for (_,cells),need,pad in zip(groups,required,padding):
-                    count = round((need-pad)/half_cell)
-                    choices.append({size: len(grid_lines(cells,size*half_cell))
-                                    for size in range(min_cells,max(min_cells,count)+1)})
-                best = None
-                for a in range(min_cells,capacity-2*min_cells+1):
-                    for b in range(min_cells,capacity-a-min_cells+1):
-                        sizes = a,b,capacity-a-b
-                        heights = [options[min(size,max(options))]
-                                   for size,options in zip(sizes,choices)]
-                        score = max(heights),sum(heights),sum((3*size-capacity)**2 for size in sizes)
-                        if best is None or score < best[0]:
-                            best = score,sizes
-                widths = [pad+size*half_cell for pad,size in zip(padding,best[1])]
-                slack = (available-sum(widths))/3
-                widths = [width+slack for width in widths]
+            widths = option_widths(groups,padding)
+        lines = [grid_lines(cells,width-pad) for (_,cells),width,pad in zip(groups,widths,padding)]
+        if any(width-option_text_right(line[0]) < OPTION_MIN_GAP
+               for width,line in zip(widths[:2],lines)):
+            full = [[cell for word in grid_words(cells,'') for cell in word] for _,cells in groups]
+            minimum = [pad+sum(cell[2] for cell in line)*CELL_WIDTH/2
+                       for pad,line in zip(padding,full)]
+            for i in range(2):
+                minimum[i] = max(minimum[i],option_text_right(full[i])+OPTION_MIN_GAP)
+            available = OPTION_RIGHT-OPTION_LEFT
+            if sum(minimum) <= available:
+                slack = (available-sum(minimum))/3
+                widths = [width+slack for width in minimum]
+                lines = [[line] for line in full]
+            else:
+                # Allow for a full-width glyph centered in a half-width punctuation cell.
+                reserve = OPTION_MIN_GAP+(BODY_SIZE-CELL_WIDTH/2)/2
+                padding = [max(pad,OPTION_INSET+reserve) for pad in padding[:2]]+padding[2:]
+                widths = option_widths(groups,padding)
+                lines = [grid_lines(cells,width-pad)
+                         for (_,cells),width,pad in zip(groups,widths,padding)]
         plan = []
         x = OPTION_LEFT
-        for (label,cells),width,pad in zip(groups,widths,padding):
-            plan.append((label,x,0,grid_lines(cells,width-pad)))
+        for (label,_),width,option_lines in zip(groups,widths,lines):
+            plan.append((label,x,0,option_lines))
             x += width
         return plan
     if len(groups)>1:
@@ -755,7 +794,7 @@ def booklet(source,raw,keys,set_number,output,examples,content=None):
             boxes=list(photos(raw,page))
             assert len(boxes)==6
             replacements = {
-                'ABCDEF'.index(entry['answer']):entry['image']
+                'ABCDEF'.index(entry['answer']):entry
                 for number,entry in (reading_items if page==6 else listening_images).items()
                 if first <= number <= last
             }

@@ -1,263 +1,270 @@
 {
- "set": 9,
- "L2": {
-  "6": {
-   "answer": "D",
-   "script": [
-    "甲：你在买菜吗？",
-    "乙：对，今天晚上我做饭。"
-   ],
-   "image": "tmp/newimages2/s09_L2_06.jpg",
-   "picture": "a young Asian woman in a mustard-yellow top choosing fresh vegetables at a market stall"
-  },
-  "7": {
-   "answer": "E",
-   "script": [
-    "甲：你在玩儿什么？",
-    "乙：我在玩儿手机，你也来看看。"
-   ],
-   "image": "tmp/newimages2/s09_L2_07.jpg",
-   "picture": "an Asian boy in a navy-blue T-shirt sitting on a sofa playing a game on a mobile phone"
-  },
-  "8": {
-   "answer": "F",
-   "script": [
-    "甲：这么晚了，你还在工作吗？",
-    "乙：是，今天的工作很多。"
-   ],
-   "image": "tmp/newimages2/s09_L2_08.jpg",
-   "picture": "a young Asian man in a navy shirt working at a computer in an office at night, dark windows behind him"
-  },
-  "9": {
-   "answer": "A",
-   "script": [
-    "甲：你的狗叫什么名字？",
-    "乙：它叫小白，今年两岁了。"
-   ],
-   "image": "tmp/newimages2/s09_L2_09.jpg",
-   "picture": "an Asian girl in a mustard-yellow dress hugging a small white dog in a garden"
-  },
-  "10": {
-   "answer": "B",
-   "script": [
-    "甲：你们在唱什么歌？",
-    "乙：我们在唱生日歌，今天是小王的生日。"
-   ],
-   "image": "tmp/newimages2/s09_L2_10.jpg",
-   "picture": "a group of young Asian friends in navy and mustard clothes singing around a birthday table with candles"
-  },
-  "11": {
-   "answer": "D",
-   "script": [
-    "甲：你去商店买什么？",
-    "乙：我想买一个白色的杯子。"
-   ],
-   "image": "tmp/newimages2/s09_L2_11.jpg",
-   "picture": "a young Asian woman in a navy cardigan in a shop holding up a white cup, shelves of cups behind"
-  },
-  "12": {
-   "answer": "A",
-   "script": [
-    "甲：今天天气真好！",
-    "乙：是啊，天晴了，我们出去走走吧。"
-   ],
-   "image": "tmp/newimages2/s09_L2_12.jpg",
-   "picture": "a bright sunny day with blue sky, a young Asian couple in navy and mustard clothes walking happily outdoors"
-  },
-  "13": {
-   "answer": "C",
-   "script": [
-    "甲：现在几点了？",
-    "乙：十二点了，我们去吃午饭吧。"
-   ],
-   "image": "tmp/newimages2/s09_L2_13.jpg",
-   "picture": "a round wall clock showing exactly 12:00 in an office, two young Asian coworkers in navy standing up from their desks"
-  },
-  "14": {
-   "answer": "E",
-   "script": [
-    "甲：你买电影票了吗？",
-    "乙：买了，我们晚上七点去看。"
-   ],
-   "image": "tmp/newimages2/s09_L2_14.jpg",
-   "picture": "close-up of a young Asian man in a navy jacket holding two cinema tickets in front of a movie theater"
-  },
-  "15": {
-   "answer": "F",
-   "script": [
-    "甲：你在等谁？",
-    "乙：我在等我女儿，她快下课了。"
-   ],
-   "image": "tmp/newimages2/s09_L2_15.jpg",
-   "picture": "a young Asian mother in a mustard coat waiting outside a school gate, looking at the school"
-  }
- },
- "R1": {
-  "26": {
-   "answer": "F",
-   "han": "她在买面包。",
-   "pinyin": "tā zài mǎi miàn bāo",
-   "image": "tmp/newimages2/s09_R1_26.jpg",
-   "picture": "a young Asian woman in a mustard-yellow top buying bread at a bakery counter"
-  },
-  "27": {
-   "answer": "E",
-   "han": "他在穿衣服。",
-   "pinyin": "tā zài chuān yī fu",
-   "image": "tmp/newimages2/s09_R1_27.jpg",
-   "picture": "a young Asian man putting on a navy jacket in a bedroom"
-  },
-  "29": {
-   "answer": "C",
-   "han": "路上有很多车。",
-   "pinyin": "lù shang yǒu hěn duō chē",
-   "image": "tmp/newimages2/s09_R1_29.jpg",
-   "picture": "a busy city road full of cars"
-  },
-  "30": {
-   "answer": "D",
-   "han": "她在教室里读书。",
-   "pinyin": "tā zài jiào shì li dú shū",
-   "image": "tmp/newimages2/s09_R1_30.jpg",
-   "picture": "an Asian schoolgirl in a mustard-yellow sweater reading a book aloud at her desk in a classroom"
-  }
- },
- "L3": {},
- "W1": [
-  {
-   "item": 51,
-   "target": "没",
-   "pinyin": "méi",
-   "meaning_ko": "없다",
-   "given_right": "殳",
-   "missing_left": "氵",
-   "answer": "C",
-   "answer_key": "C / 没",
-   "options": [
-    {
-     "label": "A",
-     "han": "木",
-     "pinyin": "mù"
+  "set": 9,
+  "L2": {
+    "6": {
+      "answer": "D",
+      "script": [
+        "甲：你在买菜吗？",
+        "乙：对，今天晚上我做饭。"
+      ],
+      "image": "tmp/newimages2/s09_L2_06.jpg",
+      "picture": "a young Asian woman in a mustard-yellow top choosing fresh vegetables at a market stall"
     },
-    {
-     "label": "B",
-     "han": "扌",
-     "pinyin": "shǒu"
+    "7": {
+      "answer": "E",
+      "script": [
+        "甲：你在玩儿什么？",
+        "乙：我在玩儿手机，你也来看看。"
+      ],
+      "image": "tmp/newimages2/s09_L2_07.jpg",
+      "picture": "an Asian boy in a navy-blue T-shirt sitting on a sofa playing a game on a mobile phone"
     },
-    {
-     "label": "C",
-     "han": "氵",
-     "pinyin": "shuǐ"
+    "8": {
+      "answer": "F",
+      "script": [
+        "甲：这么晚了，你还在工作吗？",
+        "乙：是，今天的工作很多。"
+      ],
+      "image": "tmp/newimages2/s09_L2_08.jpg",
+      "picture": "a young Asian man in a navy shirt working at a computer in an office at night, dark windows behind him"
+    },
+    "9": {
+      "answer": "A",
+      "script": [
+        "甲：你的狗叫什么名字？",
+        "乙：它叫小白，今年两岁了。"
+      ],
+      "image": "tmp/newimages2/s09_L2_09.jpg",
+      "picture": "an Asian girl in a mustard-yellow dress hugging a small white dog in a garden"
+    },
+    "10": {
+      "answer": "B",
+      "script": [
+        "甲：你们在唱什么歌？",
+        "乙：我们在唱生日歌，今天是小王的生日。"
+      ],
+      "image": "tmp/newimages2/s09_L2_10.jpg",
+      "picture": "a group of young Asian friends in navy and mustard clothes singing around a birthday table with candles"
+    },
+    "11": {
+      "answer": "D",
+      "script": [
+        "甲：你去商店买什么？",
+        "乙：我想买一个白色的杯子。"
+      ],
+      "image": "tmp/newimages2/s09_L2_11.jpg",
+      "picture": "a young Asian woman in a navy cardigan in a shop holding up a white cup, shelves of cups behind"
+    },
+    "12": {
+      "answer": "A",
+      "script": [
+        "甲：今天天气真好！",
+        "乙：是啊，天晴了，我们出去走走吧。"
+      ],
+      "image": "tmp/newimages2/s09_L2_12.jpg",
+      "picture": "a bright sunny day with blue sky, a young Asian couple in navy and mustard clothes walking happily outdoors"
+    },
+    "13": {
+      "answer": "C",
+      "script": [
+        "甲：现在几点了？",
+        "乙：十二点了，我们去吃午饭吧。"
+      ],
+      "image": "tmp/newimages2/s09_L2_13.jpg",
+      "picture": "a round wall clock showing exactly 12:00 in an office, two young Asian coworkers in navy standing up from their desks"
+    },
+    "14": {
+      "answer": "E",
+      "script": [
+        "甲：你买电影票了吗？",
+        "乙：买了，我们晚上七点去看。"
+      ],
+      "image": "tmp/newimages2/s09_L2_14.jpg",
+      "picture": "close-up of a young Asian man in a navy jacket holding two cinema tickets in front of a movie theater"
+    },
+    "15": {
+      "answer": "F",
+      "script": [
+        "甲：你在等谁？",
+        "乙：我在等我女儿，她快下课了。"
+      ],
+      "image": "tmp/newimages2/s09_L2_15.jpg",
+      "picture": "a young Asian mother in a mustard coat waiting outside a school gate, looking at the school"
     }
-   ]
   },
-  {
-   "item": 52,
-   "target": "妹",
-   "pinyin": "mèi",
-   "meaning_ko": "여동생",
-   "given_right": "未",
-   "missing_left": "女",
-   "answer": "A",
-   "answer_key": "A / 妹",
-   "options": [
-    {
-     "label": "A",
-     "han": "女",
-     "pinyin": "nǚ"
+  "R1": {
+    "26": {
+      "answer": "F",
+      "han": "她在买面包。",
+      "pinyin": "tā zài mǎi miàn bāo",
+      "image": "tmp/newimages2/s09_R1_26.jpg",
+      "picture": "a young Asian woman in a mustard-yellow top buying bread at a bakery counter"
     },
-    {
-     "label": "B",
-     "han": "亻",
-     "pinyin": "rén"
+    "27": {
+      "answer": "E",
+      "han": "他在穿衣服。",
+      "pinyin": "tā zài chuān yī fu",
+      "image": "tmp/newimages2/s09_R1_27.jpg",
+      "picture": "a young Asian man putting on a navy jacket in a bedroom"
     },
-    {
-     "label": "C",
-     "han": "木",
-     "pinyin": "mù"
+    "28": {
+      "answer": "B",
+      "han": "男孩儿在踢足球。",
+      "pinyin": "nán hái r zài tī zú qiú",
+      "image": "tmp/newimages2/s09_R1_28.jpg",
+      "picture": "an East Asian boy in a navy shirt and mustard shorts kicking a soccer ball"
+    },
+    "29": {
+      "answer": "C",
+      "han": "路上有很多车。",
+      "pinyin": "lù shang yǒu hěn duō chē",
+      "image": "tmp/newimages2/s09_R1_29.jpg",
+      "picture": "a busy city road full of cars"
+    },
+    "30": {
+      "answer": "D",
+      "han": "她在教室里读书。",
+      "pinyin": "tā zài jiào shì li dú shū",
+      "image": "tmp/newimages2/s09_R1_30.jpg",
+      "picture": "an Asian schoolgirl in a mustard-yellow sweater reading a book aloud at her desk in a classroom"
     }
-   ]
   },
-  {
-   "item": 53,
-   "target": "给",
-   "pinyin": "gěi",
-   "meaning_ko": "주다",
-   "given_right": "合",
-   "missing_left": "纟",
-   "answer": "B",
-   "answer_key": "B / 给",
-   "options": [
+  "L3": {},
+  "W1": [
     {
-     "label": "A",
-     "han": "亻",
-     "pinyin": "rén"
+      "item": 51,
+      "target": "没",
+      "pinyin": "méi",
+      "meaning_ko": "없다",
+      "given_right": "殳",
+      "missing_left": "氵",
+      "answer": "C",
+      "answer_key": "C / 没",
+      "options": [
+        {
+          "label": "A",
+          "han": "木",
+          "pinyin": "mù"
+        },
+        {
+          "label": "B",
+          "han": "扌",
+          "pinyin": "shǒu"
+        },
+        {
+          "label": "C",
+          "han": "氵",
+          "pinyin": "shuǐ"
+        }
+      ]
     },
     {
-     "label": "B",
-     "han": "纟",
-     "pinyin": "sī"
+      "item": 52,
+      "target": "妹",
+      "pinyin": "mèi",
+      "meaning_ko": "여동생",
+      "given_right": "未",
+      "missing_left": "女",
+      "answer": "A",
+      "answer_key": "A / 妹",
+      "options": [
+        {
+          "label": "A",
+          "han": "女",
+          "pinyin": "nǚ"
+        },
+        {
+          "label": "B",
+          "han": "亻",
+          "pinyin": "rén"
+        },
+        {
+          "label": "C",
+          "han": "木",
+          "pinyin": "mù"
+        }
+      ]
     },
     {
-     "label": "C",
-     "han": "目",
-     "pinyin": "mù"
+      "item": 53,
+      "target": "给",
+      "pinyin": "gěi",
+      "meaning_ko": "주다",
+      "given_right": "合",
+      "missing_left": "纟",
+      "answer": "B",
+      "answer_key": "B / 给",
+      "options": [
+        {
+          "label": "A",
+          "han": "亻",
+          "pinyin": "rén"
+        },
+        {
+          "label": "B",
+          "han": "纟",
+          "pinyin": "sī"
+        },
+        {
+          "label": "C",
+          "han": "目",
+          "pinyin": "mù"
+        }
+      ]
+    },
+    {
+      "item": 54,
+      "target": "路",
+      "pinyin": "lù",
+      "meaning_ko": "길",
+      "given_right": "各",
+      "missing_left": "足",
+      "answer": "C",
+      "answer_key": "C / 路",
+      "options": [
+        {
+          "label": "A",
+          "han": "亻",
+          "pinyin": "rén"
+        },
+        {
+          "label": "B",
+          "han": "女",
+          "pinyin": "nǚ"
+        },
+        {
+          "label": "C",
+          "han": "足",
+          "pinyin": "zú"
+        }
+      ]
+    },
+    {
+      "item": 55,
+      "target": "钱",
+      "pinyin": "qián",
+      "meaning_ko": "돈",
+      "given_right": "戋",
+      "missing_left": "钅",
+      "answer": "B",
+      "answer_key": "B / 钱",
+      "options": [
+        {
+          "label": "A",
+          "han": "亻",
+          "pinyin": "rén"
+        },
+        {
+          "label": "B",
+          "han": "钅",
+          "pinyin": "jīn"
+        },
+        {
+          "label": "C",
+          "han": "口",
+          "pinyin": "kǒu"
+        }
+      ]
     }
-   ]
-  },
-  {
-   "item": 54,
-   "target": "路",
-   "pinyin": "lù",
-   "meaning_ko": "길",
-   "given_right": "各",
-   "missing_left": "足",
-   "answer": "C",
-   "answer_key": "C / 路",
-   "options": [
-    {
-     "label": "A",
-     "han": "亻",
-     "pinyin": "rén"
-    },
-    {
-     "label": "B",
-     "han": "女",
-     "pinyin": "nǚ"
-    },
-    {
-     "label": "C",
-     "han": "足",
-     "pinyin": "zú"
-    }
-   ]
-  },
-  {
-   "item": 55,
-   "target": "钱",
-   "pinyin": "qián",
-   "meaning_ko": "돈",
-   "given_right": "戋",
-   "missing_left": "钅",
-   "answer": "B",
-   "answer_key": "B / 钱",
-   "options": [
-    {
-     "label": "A",
-     "han": "亻",
-     "pinyin": "rén"
-    },
-    {
-     "label": "B",
-     "han": "钅",
-     "pinyin": "jīn"
-    },
-    {
-     "label": "C",
-     "han": "口",
-     "pinyin": "kǒu"
-    }
-   ]
-  }
- ]
+  ]
 }
