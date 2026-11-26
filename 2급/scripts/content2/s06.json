@@ -1,0 +1,236 @@
+{
+ "set": 6,
+ "L2": {
+  "9": {
+   "answer": "B",
+   "script": [
+    "甲：桌子上的西瓜是谁买的？",
+    "乙：是妈妈买的，我们一起吃吧。"
+   ],
+   "image": "tmp/newimages2/s06_L2_09.jpg",
+   "picture": "two Asian children in lavender-purple clothes at a table with a big cut red watermelon, about to eat slices"
+  },
+  "10": {
+   "answer": "E",
+   "script": [
+    "甲：你怎么来晚了？",
+    "乙：路上车太多了，对不起。"
+   ],
+   "image": "tmp/newimages2/s06_L2_10.jpg",
+   "picture": "a road with a heavy traffic jam full of cars, a young Asian woman in a lavender top inside a car looking at the traffic"
+  },
+  "12": {
+   "answer": "B",
+   "script": [
+    "甲：你在找什么？",
+    "乙：我在找我的手机，你看见了吗？"
+   ],
+   "image": "tmp/newimages2/s06_L2_12.jpg",
+   "picture": "a young Asian woman in a lavender sweater searching under sofa cushions for her mobile phone"
+  },
+  "13": {
+   "answer": "D",
+   "script": [
+    "甲：快起床，已经七点了！",
+    "乙：好，我现在就起来。"
+   ],
+   "image": "tmp/newimages2/s06_L2_13.jpg",
+   "picture": "an Asian boy in lavender pajamas sitting up in bed, rubbing his eyes, an alarm clock on the bedside table showing 7:00"
+  },
+  "14": {
+   "answer": "C",
+   "script": [
+    "甲：你在超市买了什么？",
+    "乙：买了牛奶和面包。"
+   ],
+   "image": "tmp/newimages2/s06_L2_14.jpg",
+   "picture": "a young Asian woman in a lavender top pushing a supermarket cart with milk and bread in it"
+  },
+  "15": {
+   "answer": "A",
+   "script": [
+    "甲：你要买什么书？",
+    "乙：我想买一本汉语书。"
+   ],
+   "image": "tmp/newimages2/s06_L2_15.jpg",
+   "picture": "a young Asian man in a lavender shirt in a bookstore picking a book from a shelf"
+  }
+ },
+ "R1": {
+  "30": {
+   "answer": "F",
+   "han": "爸爸在开车。",
+   "pinyin": "bà ba zài kāi chē",
+   "image": "tmp/newimages2/s06_R1_30.jpg",
+   "picture": "an Asian father in a lavender shirt driving a car, seen through the side window"
+  }
+ },
+ "L3": {
+  "16": {
+   "answer": "C",
+   "script": [
+    "男：电影几点开始？",
+    "女：七点半，我们还有二十分钟。",
+    "问：电影几点开始？"
+   ],
+   "question": {
+    "han": "电影几点开始？",
+    "pinyin": "diàn yǐng jǐ diǎn kāi shǐ"
+   },
+   "options": [
+    {
+     "label": "A",
+     "han": "七点",
+     "pinyin": "qī diǎn"
+    },
+    {
+     "label": "B",
+     "han": "七点二十",
+     "pinyin": "qī diǎn èr shí"
+    },
+    {
+     "label": "C",
+     "han": "七点半",
+     "pinyin": "qī diǎn bàn"
+    }
+   ]
+  }
+ },
+ "W1": [
+  {
+   "item": 51,
+   "target": "吃",
+   "pinyin": "chī",
+   "meaning_ko": "먹다",
+   "given_right": "乞",
+   "missing_left": "口",
+   "answer": "A",
+   "answer_key": "A / 吃",
+   "options": [
+    {
+     "label": "A",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "B",
+     "han": "讠",
+     "pinyin": "yán"
+    },
+    {
+     "label": "C",
+     "han": "氵",
+     "pinyin": "shuǐ"
+    }
+   ]
+  },
+  {
+   "item": 52,
+   "target": "晚",
+   "pinyin": "wǎn",
+   "meaning_ko": "늦다·저녁",
+   "given_right": "免",
+   "missing_left": "日",
+   "answer": "B",
+   "answer_key": "B / 晚",
+   "options": [
+    {
+     "label": "A",
+     "han": "目",
+     "pinyin": "mù"
+    },
+    {
+     "label": "B",
+     "han": "日",
+     "pinyin": "rì"
+    },
+    {
+     "label": "C",
+     "han": "亻",
+     "pinyin": "rén"
+    }
+   ]
+  },
+  {
+   "item": 53,
+   "target": "校",
+   "pinyin": "xiào",
+   "meaning_ko": "학교",
+   "given_right": "交",
+   "missing_left": "木",
+   "answer": "C",
+   "answer_key": "C / 校",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "扌",
+     "pinyin": "shǒu"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 54,
+   "target": "体",
+   "pinyin": "tǐ",
+   "meaning_ko": "몸",
+   "given_right": "本",
+   "missing_left": "亻",
+   "answer": "A",
+   "answer_key": "A / 体",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "木",
+     "pinyin": "mù"
+    },
+    {
+     "label": "C",
+     "han": "口",
+     "pinyin": "kǒu"
+    }
+   ]
+  },
+  {
+   "item": 55,
+   "target": "认",
+   "pinyin": "rèn",
+   "meaning_ko": "알다",
+   "given_right": "人",
+   "missing_left": "讠",
+   "answer": "C",
+   "answer_key": "C / 认",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "氵",
+     "pinyin": "shuǐ"
+    },
+    {
+     "label": "C",
+     "han": "讠",
+     "pinyin": "yán"
+    }
+   ]
+  }
+ ]
+}

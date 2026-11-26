@@ -1,0 +1,34 @@
+{
+ "set": 5,
+ "L2": {
+  "12": {
+   "answer": "E",
+   "script": [
+    "甲：你在看什么电影？",
+    "乙：一个新电影，很有意思。"
+   ],
+   "image": "tmp/newimages2/s05_L2_12.jpg",
+   "picture": "a young Asian man in a burgundy sweater sitting in a cinema seat watching a big movie screen, holding popcorn"
+  },
+  "14": {
+   "answer": "C",
+   "script": [
+    "甲：小猫在吃什么？",
+    "乙：它在吃鱼，吃得很快。"
+   ],
+   "image": "tmp/newimages2/s05_L2_14.jpg",
+   "picture": "a cat eating a small fish from a bowl on a kitchen floor"
+  }
+ },
+ "R1": {
+  "29": {
+   "answer": "E",
+   "han": "小猫在沙发上。",
+   "pinyin": "xiǎo māo zài shā fā shang",
+   "image": "tmp/newimages2/s05_R1_29.jpg",
+   "picture": "a small cat sitting on a sofa in a living room"
+  }
+ },
+ "L3": {},
+ "W1": []
+}

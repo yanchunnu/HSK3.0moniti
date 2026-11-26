@@ -1,0 +1,256 @@
+{
+ "set": 8,
+ "L2": {
+  "6": {
+   "answer": "D",
+   "script": [
+    "甲：你怎么了？",
+    "乙：我生病了，今天不去上班了。"
+   ],
+   "image": "tmp/newimages2/s08_L2_06.jpg",
+   "picture": "a young Asian woman in teal pajamas lying sick in bed with a thermometer and medicine on the bedside table"
+  },
+  "7": {
+   "answer": "B",
+   "script": [
+    "甲：你下班了吗？",
+    "乙：下班了，我现在回家。"
+   ],
+   "image": "tmp/newimages2/s08_L2_07.jpg",
+   "picture": "a young Asian man in a teal shirt with a briefcase walking out of an office building in the evening"
+  },
+  "8": {
+   "answer": "A",
+   "script": [
+    "甲：早饭吃什么？",
+    "乙：我想吃两个鸡蛋。"
+   ],
+   "image": "tmp/newimages2/s08_L2_08.jpg",
+   "picture": "a breakfast table with two boiled eggs on a plate, a young Asian woman in a teal top peeling an egg"
+  },
+  "9": {
+   "answer": "F",
+   "script": [
+    "甲：爷爷，您要去哪儿？",
+    "乙：我带小狗出去走走。"
+   ],
+   "image": "tmp/newimages2/s08_L2_09.jpg",
+   "picture": "an Asian grandfather in a teal jacket walking a small dog on a leash along a quiet street"
+  },
+  "10": {
+   "answer": "E",
+   "script": [
+    "甲：你在教弟弟做题吗？",
+    "乙：对，这个题有点儿难。"
+   ],
+   "image": "tmp/newimages2/s08_L2_10.jpg",
+   "picture": "an Asian teenage girl in a teal sweater helping her little brother with math exercises at a desk, pointing at the notebook"
+  },
+  "11": {
+   "answer": "D",
+   "script": [
+    "甲：奶奶，您吃包子吗？",
+    "乙：好，给我一个吧。"
+   ],
+   "image": "tmp/newimages2/s08_L2_11.jpg",
+   "picture": "an Asian grandmother in a teal cardigan eating a steamed bun, a bamboo steamer of buns on the table"
+  },
+  "12": {
+   "answer": "E",
+   "script": [
+    "甲：你认识他吗？",
+    "乙：认识，他是我的新同学。"
+   ],
+   "image": "tmp/newimages2/s08_L2_12.jpg",
+   "picture": "two Asian schoolboys in teal school uniforms shaking hands and smiling in a school hallway"
+  },
+  "13": {
+   "answer": "A",
+   "script": [
+    "甲：你开车开了多长时间了？",
+    "乙：两个小时了，有点儿累。"
+   ],
+   "image": "tmp/newimages2/s08_L2_13.jpg",
+   "picture": "a tired young Asian man in a teal shirt driving a car, hands on the steering wheel, yawning"
+  },
+  "14": {
+   "answer": "F",
+   "script": [
+    "甲：今天的公共汽车上人真多。",
+    "乙：是啊，我只能站着。"
+   ],
+   "image": "tmp/newimages2/s08_L2_14.jpg",
+   "picture": "a crowded city bus interior, a young Asian woman in a teal blouse standing and holding the handrail among many passengers"
+  },
+  "15": {
+   "answer": "C",
+   "script": [
+    "甲：请问，火车站怎么走？",
+    "乙：一直往前走就到了。"
+   ],
+   "image": "tmp/newimages2/s08_L2_15.jpg",
+   "picture": "on a city sidewalk a young Asian woman in teal asks a passer-by for directions, the man points straight ahead"
+  }
+ },
+ "R1": {
+  "27": {
+   "answer": "F",
+   "han": "哥哥站在门口。",
+   "pinyin": "gē ge zhàn zài mén kǒu",
+   "image": "tmp/newimages2/s08_R1_27.jpg",
+   "picture": "an Asian teenage boy in a teal shirt standing at the open front door of a house"
+  },
+  "28": {
+   "answer": "A",
+   "han": "床上有很多衣服。",
+   "pinyin": "chuáng shang yǒu hěn duō yī fu",
+   "image": "tmp/newimages2/s08_R1_28.jpg",
+   "picture": "a bed covered with many piles of clothes, no people"
+  },
+  "29": {
+   "answer": "E",
+   "han": "她在听歌。",
+   "pinyin": "tā zài tīng gē",
+   "image": "tmp/newimages2/s08_R1_29.jpg",
+   "picture": "a young Asian woman in a teal top listening to music with headphones, eyes closed"
+  }
+ },
+ "L3": {},
+ "W1": [
+  {
+   "item": 51,
+   "target": "喝",
+   "pinyin": "hē",
+   "meaning_ko": "마시다",
+   "given_right": "曷",
+   "missing_left": "口",
+   "answer": "B",
+   "answer_key": "B / 喝",
+   "options": [
+    {
+     "label": "A",
+     "han": "日",
+     "pinyin": "rì"
+    },
+    {
+     "label": "B",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 52,
+   "target": "睡",
+   "pinyin": "shuì",
+   "meaning_ko": "자다",
+   "given_right": "垂",
+   "missing_left": "目",
+   "answer": "A",
+   "answer_key": "A / 睡",
+   "options": [
+    {
+     "label": "A",
+     "han": "目",
+     "pinyin": "mù"
+    },
+    {
+     "label": "B",
+     "han": "日",
+     "pinyin": "rì"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 53,
+   "target": "机",
+   "pinyin": "jī",
+   "meaning_ko": "기계·비행기의 ‘기’",
+   "given_right": "几",
+   "missing_left": "木",
+   "answer": "C",
+   "answer_key": "C / 机",
+   "options": [
+    {
+     "label": "A",
+     "han": "女",
+     "pinyin": "nǚ"
+    },
+    {
+     "label": "B",
+     "han": "日",
+     "pinyin": "rì"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 54,
+   "target": "住",
+   "pinyin": "zhù",
+   "meaning_ko": "살다",
+   "given_right": "主",
+   "missing_left": "亻",
+   "answer": "A",
+   "answer_key": "A / 住",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "C",
+     "han": "目",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 55,
+   "target": "话",
+   "pinyin": "huà",
+   "meaning_ko": "말",
+   "given_right": "舌",
+   "missing_left": "讠",
+   "answer": "B",
+   "answer_key": "B / 话",
+   "options": [
+    {
+     "label": "A",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "B",
+     "han": "讠",
+     "pinyin": "yán"
+    },
+    {
+     "label": "C",
+     "han": "亻",
+     "pinyin": "rén"
+    }
+   ]
+  }
+ ]
+}

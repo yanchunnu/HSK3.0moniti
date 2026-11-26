@@ -1,0 +1,231 @@
+{
+ "set": 7,
+ "L2": {
+  "6": {
+   "answer": "A",
+   "script": [
+    "甲：你在门口等谁？",
+    "乙：等我的同学，我们一起去学校。"
+   ],
+   "image": "tmp/newimages2/s07_L2_06.jpg",
+   "picture": "an Asian schoolgirl in an orange jacket with a school bag standing at the front door of a house, waiting"
+  },
+  "8": {
+   "answer": "B",
+   "script": [
+    "甲：你在洗车吗？",
+    "乙：对，明天我要开车出去玩儿。"
+   ],
+   "image": "tmp/newimages2/s07_L2_08.jpg",
+   "picture": "a young Asian man in an orange T-shirt washing a car with a hose and sponge"
+  },
+  "9": {
+   "answer": "D",
+   "script": [
+    "甲：你在卖什么？",
+    "乙：我在卖水果，你要不要买一点儿？"
+   ],
+   "image": "tmp/newimages2/s07_L2_09.jpg",
+   "picture": "an Asian fruit seller in an orange apron standing behind a fruit stall at a market"
+  },
+  "10": {
+   "answer": "F",
+   "script": [
+    "甲：你们晚上去哪儿吃饭？",
+    "乙：去学校旁边的饭店，那儿的菜很好吃。"
+   ],
+   "image": "tmp/newimages2/s07_L2_10.jpg",
+   "picture": "an Asian family in orange clothes eating dinner together at a restaurant table with several dishes"
+  },
+  "11": {
+   "answer": "A",
+   "script": [
+    "甲：你看，天阴了。",
+    "乙：是啊，我们快回去吧。"
+   ],
+   "image": "tmp/newimages2/s07_L2_11.jpg",
+   "picture": "dark grey cloudy sky over a city park, two young Asian people in orange clothes looking up at the clouds"
+  },
+  "12": {
+   "answer": "B",
+   "script": [
+    "甲：你弟弟在做什么？",
+    "乙：他在房间里上网。"
+   ],
+   "image": "tmp/newimages2/s07_L2_12.jpg",
+   "picture": "an Asian boy in an orange T-shirt sitting at a desk in his bedroom using a desktop computer"
+  },
+  "14": {
+   "answer": "F",
+   "script": [
+    "甲：你想买哪个手机？",
+    "乙：我想买这个黑色的。"
+   ],
+   "image": "tmp/newimages2/s07_L2_14.jpg",
+   "picture": "a young Asian man in an orange shirt in a phone shop holding a black smartphone, phones on display"
+  },
+  "15": {
+   "answer": "D",
+   "script": [
+    "甲：奶奶，我帮您拿吧。",
+    "乙：好，谢谢你。"
+   ],
+   "image": "tmp/newimages2/s07_L2_15.jpg",
+   "picture": "an Asian teenage boy in an orange hoodie helping his grandmother carry heavy shopping bags on the street"
+  }
+ },
+ "R1": {
+  "28": {
+   "answer": "F",
+   "han": "他在看手机。",
+   "pinyin": "tā zài kàn shǒu jī",
+   "image": "tmp/newimages2/s07_R1_28.jpg",
+   "picture": "a young Asian man in an orange shirt looking at his mobile phone"
+  },
+  "30": {
+   "answer": "A",
+   "han": "她在吃早饭。",
+   "pinyin": "tā zài chī zǎo fàn",
+   "image": "tmp/newimages2/s07_R1_30.jpg",
+   "picture": "a young Asian woman in an orange top eating breakfast (bread and milk) at a table in the morning"
+  }
+ },
+ "L3": {},
+ "W1": [
+  {
+   "item": 51,
+   "target": "洗",
+   "pinyin": "xǐ",
+   "meaning_ko": "씻다",
+   "given_right": "先",
+   "missing_left": "氵",
+   "answer": "A",
+   "answer_key": "A / 洗",
+   "options": [
+    {
+     "label": "A",
+     "han": "氵",
+     "pinyin": "shuǐ"
+    },
+    {
+     "label": "B",
+     "han": "扌",
+     "pinyin": "shǒu"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 52,
+   "target": "姐",
+   "pinyin": "jiě",
+   "meaning_ko": "언니·누나",
+   "given_right": "且",
+   "missing_left": "女",
+   "answer": "B",
+   "answer_key": "B / 姐",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "女",
+     "pinyin": "nǚ"
+    },
+    {
+     "label": "C",
+     "han": "目",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 53,
+   "target": "红",
+   "pinyin": "hóng",
+   "meaning_ko": "빨갛다",
+   "given_right": "工",
+   "missing_left": "纟",
+   "answer": "C",
+   "answer_key": "C / 红",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "讠",
+     "pinyin": "yán"
+    },
+    {
+     "label": "C",
+     "han": "纟",
+     "pinyin": "sī"
+    }
+   ]
+  },
+  {
+   "item": 54,
+   "target": "跑",
+   "pinyin": "pǎo",
+   "meaning_ko": "달리다",
+   "given_right": "包",
+   "missing_left": "足",
+   "answer": "B",
+   "answer_key": "B / 跑",
+   "options": [
+    {
+     "label": "A",
+     "han": "木",
+     "pinyin": "mù"
+    },
+    {
+     "label": "B",
+     "han": "足",
+     "pinyin": "zú"
+    },
+    {
+     "label": "C",
+     "han": "亻",
+     "pinyin": "rén"
+    }
+   ]
+  },
+  {
+   "item": 55,
+   "target": "饭",
+   "pinyin": "fàn",
+   "meaning_ko": "밥",
+   "given_right": "反",
+   "missing_left": "饣",
+   "answer": "A",
+   "answer_key": "A / 饭",
+   "options": [
+    {
+     "label": "A",
+     "han": "饣",
+     "pinyin": "shí"
+    },
+    {
+     "label": "B",
+     "han": "扌",
+     "pinyin": "shǒu"
+    },
+    {
+     "label": "C",
+     "han": "氵",
+     "pinyin": "shuǐ"
+    }
+   ]
+  }
+ ]
+}

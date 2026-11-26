@@ -9,7 +9,7 @@ import re
 import unicodedata
 from io import BytesIO
 
-from PIL import Image
+from PIL import Image, ImageOps
 import pymupdf as fitz
 from pypdf import PdfReader
 from pypinyin import Style, pinyin
@@ -97,6 +97,55 @@ def photos(raw,page):
             x,y,w,h = map(float,ops[i][0])
             yield fitz.Rect(x,height-y-h,x+w,height-y)
 
+
+def replacement_photo(path,clip,size):
+    with Image.open(path) as photo:
+        photo = ImageOps.exif_transpose(photo).convert('RGB')
+    ratio = clip.width/clip.height
+    width = min(photo.width,photo.height*ratio)
+    height = width/ratio
+    left,top = (photo.width-width)/2,(photo.height-height)/2
+    box = (max(0,left),max(0,top),min(photo.width,left+width),min(photo.height,top+height))
+    return photo.resize(size,Image.Resampling.LANCZOS,box=box)
+
+
+def content_items(content,section):
+    return {int(n):entry for n,entry in content.get(section,{}).items()}
+
+
+def content_cells(entry):
+    han = entry['han']
+    readings = entry['pinyin'].split()
+    assert len(readings) == len(re.findall(HAN,han)), entry
+    syllables = iter(readings)
+    return [(char,next(syllables) if re.fullmatch(HAN,char) else '') for char in han]
+
+
+def content_options(entry):
+    options = [(option['label'],content_cells(option)) for option in entry['options']]
+    assert [label for label,_ in options] == list('ABC'), entry
+    return options
+
+
+def apply_content(content,keys,scripts):
+    for section,items in [('L2',range(6,16)),('L3',range(16,26)),('R1',range(26,31))]:
+        for number,entry in content_items(content,section).items():
+            assert number in items and entry['answer'] == keys[number], (section,number,entry)
+            if section != 'R1':
+                lines = entry['script']
+                assert len(lines) == (2 if section=='L2' else 3)
+                assert all(re.fullmatch(r'[\u3400-\u9fff：，、。？！；]+',line) for line in lines)
+                scripts[number] = lines
+    for number,entry in writing_content(content).items():
+        assert number in range(51,56)
+        assert entry['answer_key'] == f"{entry['answer']} / {entry['target']}"
+        assert next(o['han'] for o in entry['options'] if o['label']==entry['answer']) == entry['missing_left']
+        keys[number] = entry['answer_key']
+
+
+def writing_content(content):
+    return {entry['item']:entry for entry in content.get('W1',[])}
+
 class Layout:
     def __init__(self,set_number):
         self.set = set_number
@@ -165,10 +214,12 @@ class Layout:
         self.c.drawText(text)
         self.c.restoreState()
 
-    def image(self,source,page,clip,x,y,w,h):
+    def image(self,source,page,clip,x,y,w,h,replacement=None):
         scale = min(w/clip.width,h/clip.height)
         pix = source[page].get_pixmap(matrix=fitz.Matrix(2,2),clip=clip,alpha=False)
         im = Image.frombytes('RGB',(pix.width,pix.height),pix.samples)
+        if replacement is not None:
+            im = replacement_photo(replacement,clip,im.size)
         im.thumbnail((1200,1200))
         encoded = BytesIO()
         im.save(encoded,'JPEG',quality=85,optimize=True)
@@ -480,6 +531,18 @@ def question_blocks(rows):
         yield block
 
 
+def replace_question_rows(rows,replacements,with_options=False):
+    for block in question_blocks(rows):
+        label = block[0][0][0]
+        entry = replacements.get(int(label[:-1]))
+        if entry is None:
+            yield from block
+        else:
+            yield [(label,content_cells(entry['question'] if with_options else entry))]
+            if with_options:
+                yield content_options(entry)
+
+
 def draw_question_blocks(layout,rows,y,part,heading,*,step=ROW_STEP,gap=0,
                          answer_box=False,writing_keys=None,fit_page=False):
     blocks = []
@@ -520,7 +583,22 @@ def draw_question_blocks(layout,rows,y,part,heading,*,step=ROW_STEP,gap=0,
         y += gap
 
 
-def draw_components(layout,page,y):
+def draw_replacement_components(layout,x,y,entry):
+    arrangement = entry.get('layout','lr')
+    if arrangement == 'lr':
+        # Use the baseline and offsets of the set 06 left-right diagrams.
+        question = (11.90,20.58)
+        component = (24.05,27.72)
+    elif arrangement == 'tb':
+        question = (20.90,13.23)
+        component = (16.00,28.00)
+    else:
+        raise ValueError(f"Unknown W1 layout for item {entry['item']}: {arrangement!r}")
+    layout.text(x+question[0],y+question[1],'?',BODY_SIZE,'Latin')
+    layout.text(x+component[0],y+component[1],entry['given_right'],BODY_SIZE)
+
+
+def draw_components(layout,page,y,replacements=None):
     rows = source_rows(page)
     starts = [i-1 for i,(_,row) in enumerate(rows)
               if len(row)==1 and re.fullmatch(r'5[1-5]\.',row[0]['text'])]
@@ -532,25 +610,35 @@ def draw_components(layout,page,y):
                          key=lambda span: span['origin'][0])
         inside = [span for span in spans if span['origin'][0] < 150]
         arrow, = [span for span in spans if span['text']=='→']
-        layout.text(32,y,number[0]['text'],NUMBER_SIZE,'Latin')
+        label = number[0]['text']
+        entry = (replacements or {}).get(int(label[:-1]))
+        layout.text(32,y,label,NUMBER_SIZE,'Latin')
         diagram_x = 97
         x = diagram_x
-        for span in hint:
-            value = span['text']
-            font = 'KR' if 'Malgun' in span['font'] else 'Latin'
+        hint_parts = [(span['text'],'KR' if 'Malgun' in span['font'] else 'Latin') for span in hint]
+        if entry:
+            hint_parts = [(entry['pinyin']+' / ','Latin')]
+            hint_parts.extend((part,'CN' if re.fullmatch(HAN+'+',part) else 'KR')
+                              for part in re.findall(HAN+'+|[^\u3400-\u9fff]+',entry['meaning_ko']))
+        for value,font in hint_parts:
             size = PINYIN_SIZE if font=='Latin' else NUMBER_SIZE
             layout.text(x,y-4,value,size,font)
             x += pdfmetrics.stringWidth(value,font,size)
         layout.box(diagram_x,y+1,45,32)
-        for span in inside:
-            sx,sy = span['origin']
-            value = span['text']
-            font = 'Latin' if value=='?' else 'CN'
-            layout.text(diagram_x+5+(sx-84)*.60,y+(sy-baseline)*.49,value,BODY_SIZE,font)
+        if entry:
+            draw_replacement_components(layout,diagram_x,y,entry)
+        else:
+            for span in inside:
+                sx,sy = span['origin']
+                value = span['text']
+                font = 'Latin' if value=='?' else 'CN'
+                layout.text(diagram_x+5+(sx-84)*.60,y+(sy-baseline)*.49,value,BODY_SIZE,font)
         layout.text(224,y+23,arrow['text'],BODY_SIZE)
         layout.box(316,y+1,35,32)
         groups = [(choices[2*i]['text'].strip(),[(choices[2*i+1]['text'],ruby[i]['text'])])
                   for i in range(3)]
+        if entry:
+            groups = content_options(entry)
         bottom = draw_groups(layout,y+48,groups)
         y = bottom+20
     assert bottom < 509
@@ -591,7 +679,11 @@ def draw_listening1_example(layout):
         layout.text(x,192,label,NUMBER_SIZE,'Latin',True)
     layout.mark(225,188)
 
-def booklet(source,raw,keys,set_number,output,examples):
+def booklet(source,raw,keys,set_number,output,examples,content=None):
+    content = content or {}
+    listening_images = content_items(content,'L2')
+    reading_items = content_items(content,'R1')
+    listening_questions = content_items(content,'L3')
     layout = Layout(set_number)
     t,ln = layout.text,layout.line
     url = f'https://yanchunnu.github.io/-/hsk-listening.html?level=2&set={set_number}'
@@ -662,10 +754,15 @@ def booklet(source,raw,keys,set_number,output,examples):
             t(32,118 if initial else 107,'选择与句子相符的图片。' if page==6 else '听对话，选择最匹配的图片。',9)
             boxes=list(photos(raw,page))
             assert len(boxes)==6
+            replacements = {
+                'ABCDEF'.index(entry['answer']):entry['image']
+                for number,entry in (reading_items if page==6 else listening_images).items()
+                if first <= number <= last
+            }
             for i,clip in enumerate(boxes):
                 row,col=divmod(i,2)
                 x,y=52+151*col,128+72*row
-                layout.image(source,page,clip,x,y,125,57)
+                layout.image(source,page,clip,x,y,125,57,replacements.get(i))
                 t(x+62,y+65,'ABCDEF'[i],NUMBER_SIZE,'Latin',True)
             unused = (set('ABCDEF')-{keys[i] for i in range(first,last+1)})
             assert len(unused)==1
@@ -679,7 +776,10 @@ def booklet(source,raw,keys,set_number,output,examples):
                 layout.box(329,343)
                 t(336.5,354,unused.pop(),9,'Latin',True)
             if page==6:
-                draw_question_blocks(layout,source_cells(source[page],start=442,stop=676),
+                rows = source_cells(source[page],start=442,stop=676)
+                if reading_items:
+                    rows = replace_question_rows(rows,reading_items)
+                draw_question_blocks(layout,rows,
                                      386,PARTS[part],heading,step=26,answer_box=True)
             else:
                 for i,n in enumerate(range(first,last+1)):
@@ -738,7 +838,7 @@ def booklet(source,raw,keys,set_number,output,examples):
                 draw_cells(layout,62+pdfmetrics.stringWidth(prefix,'CN',BODY_SIZE),145,[('明','míng')],316)
                 layout.box(316,128,35,32)
                 t(333.5,148,'明',BODY_SIZE,center=True)
-                draw_components(layout,source[page],177)
+                draw_components(layout,source[page],177,writing_content(content))
             elif page==13:
                 t(32,146,'例',NUMBER_SIZE)
                 draw_cells(layout,62,146,[('____','xuéxiào'),*zip('离我家很近。','lí wǒ jiā hěn jìn'.split()+[''])],
@@ -749,6 +849,8 @@ def booklet(source,raw,keys,set_number,output,examples):
                 blanks = [d['rect'] for d in source[page].get_drawings()
                           if d['rect'].width>45 and d['rect'].height==0] if page==13 else []
                 rows = source_cells(source[page],start=start,blanks=blanks)
+                if page in (4,5) and listening_questions:
+                    rows = replace_question_rows(rows,listening_questions,with_options=True)
                 draw_question_blocks(layout,rows,y,PARTS[part],heading,
                                      step=21 if page==10 else ROW_STEP,
                                      gap=31 if page==13 else 7 if page in (4,5,10,11) else 0,
@@ -827,11 +929,15 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('set_number',type=int,choices=range(1,11))
     parser.add_argument('--examples',type=Path,help='JSON with set-specific examples for the unused options')
+    parser.add_argument('--content',type=Path,help='JSON with replacement questions and images')
     args=parser.parse_args()
     if args.set_number != 1 and args.examples is None:
         parser.error('supply --examples for the selected source photos and options')
     examples=json.loads(args.examples.read_text(encoding='utf8')) if args.examples else SAMPLE_EXAMPLES
     n=args.set_number
+    content=json.loads(args.content.read_text(encoding='utf8')) if args.content else {}
+    if content.get('set',n) != n:
+        parser.error('--content belongs to a different set')
     stem=f'HSK3.0_2급_제{n:02}회_'
     source_path=Path('input/sets')/(stem+'표지통일_전체듣기QR.pdf')
     out=Path('output')
@@ -841,7 +947,8 @@ def main():
     answer=out/(stem+'정답및해설.pdf')
     with fitz.open(source_path) as source:
         keys,scripts=answers(source)
-        booklet(source,PdfReader(source_path),keys,n,problem,examples)
+        apply_content(content,keys,scripts)
+        booklet(source,PdfReader(source_path),keys,n,problem,examples,content)
         answer_booklet(keys,scripts,n,answer,examples)
     for path in (problem,answer):
         with fitz.open(path) as pdf:

@@ -1,0 +1,277 @@
+{
+ "set": 10,
+ "L2": {
+  "6": {
+   "answer": "C",
+   "script": [
+    "甲：这条鱼真大！",
+    "乙：是我爸爸买的，晚上我们吃鱼。"
+   ],
+   "image": "tmp/newimages2/s10_L2_06.jpg",
+   "picture": "a big fresh fish lying on a kitchen cutting board, an Asian girl in a red top looking at it in surprise"
+  },
+  "7": {
+   "answer": "A",
+   "script": [
+    "甲：你的电脑怎么了？",
+    "乙：不能上网了，你帮我看看吧。"
+   ],
+   "image": "tmp/newimages2/s10_L2_07.jpg",
+   "picture": "a young Asian man in a red shirt frowning at a laptop computer with an error on the screen"
+  },
+  "8": {
+   "answer": "F",
+   "script": [
+    "甲：奶奶在做什么？",
+    "乙：她在楼下跟朋友说话呢。"
+   ],
+   "image": "tmp/newimages2/s10_L2_08.jpg",
+   "picture": "two Asian grandmothers in red clothes chatting together outside an apartment building"
+  },
+  "9": {
+   "answer": "B",
+   "script": [
+    "甲：你每天怎么去学校？",
+    "乙：我走路去，十分钟就到了。"
+   ],
+   "image": "tmp/newimages2/s10_L2_09.jpg",
+   "picture": "an Asian schoolboy in a red jacket with a school bag walking along a sidewalk to school in the morning"
+  },
+  "10": {
+   "answer": "E",
+   "script": [
+    "甲：你看，那只狗跑得真快！",
+    "乙：是啊，它很喜欢跑。"
+   ],
+   "image": "tmp/newimages2/s10_L2_10.jpg",
+   "picture": "a dog running very fast across a green grass field"
+  },
+  "11": {
+   "answer": "D",
+   "script": [
+    "甲：这只小猫是你的吗？",
+    "乙：不是，是我朋友的，我帮她看几天。"
+   ],
+   "image": "tmp/newimages2/s10_L2_11.jpg",
+   "picture": "an Asian girl in a red sweater holding a small kitten in her arms at home"
+  },
+  "12": {
+   "answer": "C",
+   "script": [
+    "甲：你爸爸做饭做得怎么样？",
+    "乙：很好，他做的菜很好吃。"
+   ],
+   "image": "tmp/newimages2/s10_L2_12.jpg",
+   "picture": "an Asian father in a red apron cooking in a kitchen, a plate of food ready"
+  },
+  "13": {
+   "answer": "A",
+   "script": [
+    "甲：雨下得真大。",
+    "乙：我们进商店等一会儿吧。"
+   ],
+   "image": "tmp/newimages2/s10_L2_13.jpg",
+   "picture": "heavy rain on a street, two young Asian people in red clothes standing in a shop doorway waiting for the rain to stop"
+  },
+  "15": {
+   "answer": "E",
+   "script": [
+    "甲：你在给谁买药？",
+    "乙：给我奶奶，她身体不太好。"
+   ],
+   "image": "tmp/newimages2/s10_L2_15.jpg",
+   "picture": "a young Asian man in a red shirt at a pharmacy counter buying medicine from a pharmacist"
+  }
+ },
+ "R1": {
+  "26": {
+   "answer": "A",
+   "han": "他在喝牛奶。",
+   "pinyin": "tā zài hē niú nǎi",
+   "image": "tmp/newimages2/s10_R1_26.jpg",
+   "picture": "an Asian boy in a red T-shirt drinking a glass of milk"
+  },
+  "27": {
+   "answer": "E",
+   "han": "他在找东西。",
+   "pinyin": "tā zài zhǎo dōng xi",
+   "image": "tmp/newimages2/s10_R1_27.jpg",
+   "picture": "a young Asian man in a red shirt searching through a drawer looking for something"
+  },
+  "28": {
+   "answer": "F",
+   "han": "她在看电影。",
+   "pinyin": "tā zài kàn diàn yǐng",
+   "image": "tmp/newimages2/s10_R1_28.jpg",
+   "picture": "a young Asian woman in a red sweater sitting in a cinema watching a movie"
+  }
+ },
+ "L3": {
+  "25": {
+   "answer": "B",
+   "script": [
+    "男：你哥哥在哪儿工作？",
+    "女：他在医院工作，他是医生。",
+    "问：她哥哥做什么工作？"
+   ],
+   "question": {
+    "han": "她哥哥做什么工作？",
+    "pinyin": "tā gē ge zuò shén me gōng zuò"
+   },
+   "options": [
+    {
+     "label": "A",
+     "han": "老师",
+     "pinyin": "lǎo shī"
+    },
+    {
+     "label": "B",
+     "han": "医生",
+     "pinyin": "yī shēng"
+    },
+    {
+     "label": "C",
+     "han": "学生",
+     "pinyin": "xué sheng"
+    }
+   ]
+  }
+ },
+ "W1": [
+  {
+   "item": 51,
+   "target": "快",
+   "pinyin": "kuài",
+   "meaning_ko": "빠르다",
+   "given_right": "夬",
+   "missing_left": "忄",
+   "answer": "A",
+   "answer_key": "A / 快",
+   "options": [
+    {
+     "label": "A",
+     "han": "忄",
+     "pinyin": "xīn"
+    },
+    {
+     "label": "B",
+     "han": "扌",
+     "pinyin": "shǒu"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  },
+  {
+   "item": 52,
+   "target": "玩",
+   "pinyin": "wán",
+   "meaning_ko": "놀다",
+   "given_right": "元",
+   "missing_left": "王",
+   "answer": "B",
+   "answer_key": "B / 玩",
+   "options": [
+    {
+     "label": "A",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "B",
+     "han": "王",
+     "pinyin": "wáng"
+    },
+    {
+     "label": "C",
+     "han": "亻",
+     "pinyin": "rén"
+    }
+   ]
+  },
+  {
+   "item": 53,
+   "target": "狗",
+   "pinyin": "gǒu",
+   "meaning_ko": "개",
+   "given_right": "句",
+   "missing_left": "犭",
+   "answer": "C",
+   "answer_key": "C / 狗",
+   "options": [
+    {
+     "label": "A",
+     "han": "口",
+     "pinyin": "kǒu"
+    },
+    {
+     "label": "B",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "C",
+     "han": "犭",
+     "pinyin": "quǎn"
+    }
+   ]
+  },
+  {
+   "item": 54,
+   "target": "冷",
+   "pinyin": "lěng",
+   "meaning_ko": "춥다",
+   "given_right": "令",
+   "missing_left": "冫",
+   "answer": "A",
+   "answer_key": "A / 冷",
+   "options": [
+    {
+     "label": "A",
+     "han": "冫",
+     "pinyin": "bīng"
+    },
+    {
+     "label": "B",
+     "han": "木",
+     "pinyin": "mù"
+    },
+    {
+     "label": "C",
+     "han": "日",
+     "pinyin": "rì"
+    }
+   ]
+  },
+  {
+   "item": 55,
+   "target": "欢",
+   "pinyin": "huān",
+   "meaning_ko": "기쁘다(喜欢의 ‘欢’)",
+   "given_right": "欠",
+   "missing_left": "又",
+   "answer": "B",
+   "answer_key": "B / 欢",
+   "options": [
+    {
+     "label": "A",
+     "han": "亻",
+     "pinyin": "rén"
+    },
+    {
+     "label": "B",
+     "han": "又",
+     "pinyin": "yòu"
+    },
+    {
+     "label": "C",
+     "han": "木",
+     "pinyin": "mù"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,53 @@
+{
+ "set": 4,
+ "L2": {
+  "9": {
+   "answer": "B",
+   "script": [
+    "甲：你在洗什么？",
+    "乙：我在洗杯子，杯子太多了。"
+   ],
+   "image": "tmp/newimages2/s04_L2_09.jpg",
+   "picture": "a young Asian man in an olive-green shirt washing several glass cups at a kitchen sink"
+  },
+  "11": {
+   "answer": "C",
+   "script": [
+    "甲：爷爷在看什么？",
+    "乙：他在看今天的报纸。"
+   ],
+   "image": "tmp/newimages2/s04_L2_11.jpg",
+   "picture": "an Asian grandfather in an olive-green cardigan sitting on a sofa reading a newspaper"
+  },
+  "12": {
+   "answer": "D",
+   "script": [
+    "甲：你们怎么去公司？",
+    "乙：我们坐地铁去，很快就到。"
+   ],
+   "image": "tmp/newimages2/s04_L2_12.jpg",
+   "picture": "two young Asian office workers in olive-green clothes standing inside a modern subway train car holding the handrail"
+  },
+  "14": {
+   "answer": "E",
+   "script": [
+    "甲：今天下雪了吗？",
+    "乙：下了，外面都是白色的。"
+   ],
+   "image": "tmp/newimages2/s04_L2_14.jpg",
+   "picture": "a young Asian woman in an olive-green coat standing in a snowy street, snow falling, everything white"
+  },
+  "15": {
+   "answer": "F",
+   "script": [
+    "甲：你们在包什么？",
+    "乙：我们在包饺子，晚上一起吃。"
+   ],
+   "image": "tmp/newimages2/s04_L2_15.jpg",
+   "picture": "an Asian grandmother and a little girl in olive-green clothes making Chinese dumplings together at a table"
+  }
+ },
+ "R1": {},
+ "L3": {},
+ "W1": []
+}
