@@ -31,26 +31,33 @@ def text(pdf, x, y, value, font, size, color):
     pdf.drawString(x, 540-y, value)
 
 
-def width(pair):
-    return max(pdfmetrics.stringWidth(pair['pinyin'], 'Latin', 7),
-               pdfmetrics.stringWidth(pair['hanzi'], 'CN', 10))
+# In the approved set 02 crops, the effective Latin size is 5.9 on the
+# normalized grid. Scale the 7-point Latin face to match that printed size.
+PINYIN_SCALE = 5.9 / 7
+HANZI_SIZE = {'L2': 8, 'L4': 8, 'R1': 8.28, 'R2': 8, 'R3': 9, 'R4': 8.1}
 
 
-def paired(pdf, x, y, pair, right=354):
-    assert x + width(pair) <= right, (x, right, pair)
-    pinyin = pair['pinyin']
-    py_x = x
-    if pinyin.startswith('★ '):
-        text(pdf, x, y, '★', 'CN', 7, '#4e5e70')
-        py_x += pdfmetrics.stringWidth('★', 'CN', 7) + 2
-        pinyin = pinyin[2:]
-    text(pdf, py_x, y, pinyin, 'Latin', 7, '#4e5e70')
-    text(pdf, x, y+10, pair['hanzi'], 'CN', 10, '#17212c')
+def width(pair, size):
+    return max(pdfmetrics.stringWidth(pair['pinyin'], 'Latin', 7) * PINYIN_SCALE,
+               pdfmetrics.stringWidth(pair['hanzi'], 'CN', size))
 
 
-def choices(pdf, y, values, labels, x, right, scale):
-    widths = [12+width(values[label]) for label in labels]
-    starts = [x, x+104, x+208]
+def paired(pdf, x, y, pair, size, right=354):
+    assert x + width(pair, size) <= right, (x, right, pair)
+    pdf.saveState()
+    pdf.translate(x, 540-y)
+    pdf.scale(PINYIN_SCALE, PINYIN_SCALE)
+    pdf.setFont('Latin', 7)
+    pdf.setFillColor('#4e5e70')
+    pdf.drawString(0, 0, pair['pinyin'].removeprefix('★ '))
+    pdf.restoreState()
+    text(pdf, x, y+10.9, pair['hanzi'], 'CN', size, '#17212c')
+
+
+def choices(pdf, y, values, x, right, scale):
+    labels = 'ABC'
+    widths = [11.5+width(values[label], 8) for label in labels]
+    starts = [x, x+101.6, x+203.2]
     gaps = [b-a-span for a, b, span in zip(starts, starts[1:], widths)]
     if min(gaps)*scale < 20 or starts[-1]+widths[-1] > right:
         gap = (right-x-sum(widths))/(len(labels)-1)
@@ -58,28 +65,41 @@ def choices(pdf, y, values, labels, x, right, scale):
         gaps = [gap, gap]
     assert min(gaps)*scale >= 20, (labels, values, gaps)
     for label, left in zip(labels, starts):
-        text(pdf, left, y+10, label, 'Latin', 8, '#17212c')
-        paired(pdf, left+12, y, values[label], right)
+        text(pdf, left, y+10.9, label, 'Latin', 7.1, '#17212c')
+        paired(pdf, left+11.5, y, values[label], 8, right)
     return min(gaps)*scale
 
 
 def draw_item(pdf, part, item, x, y, scale):
     right = {'R1': 326, 'R2': 183}.get(part, 354)
+    size = HANZI_SIZE[part]
+    y += 7.5
     if part in ('L2', 'L4'):
-        x += 5
+        return choices(pdf, y, item['choices'], x+3.5, right, scale)
+    if part == 'R4':
+        passage, question = item['stem']
+        x += 2.8
+        if width(passage, size) > right-x:
+            han = re.split(r'(?<=[。！？；，])', passage['hanzi'])
+            py = re.split(r'(?<=[.!?;,])\s+', passage['pinyin'])
+            han = [clause for clause in han if clause]
+            breaks = [
+                (dict(hanzi=''.join(han[:i]), pinyin=' '.join(py[:i])),
+                 dict(hanzi=''.join(han[i:]), pinyin=' '.join(py[i:])))
+                for i in range(1, len(py)) if len(han) == len(py)
+            ]
+            first, passage = next(
+                pair for pair in reversed(breaks)
+                if max(width(line, size) for line in pair) <= right-x
+            )
+            paired(pdf, x, y, first, size, right)
+            y += 18.5
+        paired(pdf, x, y, passage, size, right)
+        paired(pdf, x, y+24.1, question, size, right)
+        return choices(pdf, y+47.4, item['choices'], x+.7, right, scale)
+    x += {'R1': 2.85, 'R2': 2, 'R3': 4.1}[part]
     for pair in item['stem']:
-        if part == 'R4' and width(pair) > right-x:
-            han = re.split(r'(?<=[。！？])(?=.)', pair['hanzi'], maxsplit=1)
-            py = re.split(r'(?<=[.!?])\s+(?=.)', pair['pinyin'], maxsplit=1)
-            assert len(han) == len(py) == 2, pair
-            lines = [dict(hanzi=h, pinyin=p) for h, p in zip(han, py)]
-        else:
-            lines = [pair]
-        for line in lines:
-            paired(pdf, x, y, line, right)
-            y += 17
-    if part in ('L2', 'L4', 'R4'):
-        return choices(pdf, y+(part != 'L4'), item['choices'], 'ABC', x, 354, scale)
+        paired(pdf, x, y, pair, size, right)
     return None
 
 
@@ -137,7 +157,7 @@ def draw_page(pdf, rendered, clips, parts, photos, page_no, scale, gaps):
                        if values[label] != original.get(label, values[label])]
             draw_crop(pdf, rendered, clip, None, [(left, left+39) for left, _ in changed])
             for left, value in changed:
-                paired(pdf, left+1, y+15, value, left+39)
+                paired(pdf, left+1.2, y+17, value, 9, left+39)
             continue
         row = index-photo_slot-(n == 8)
         if n == 7:
@@ -147,8 +167,8 @@ def draw_page(pdf, rendered, clips, parts, photos, page_no, scale, gaps):
                 if data['choices'][label] == data.get('original_choices', data['choices'])[label]:
                     draw_crop(pdf, rendered, clip, None)
                 else:
-                    text(pdf, x, y+17, label, 'Latin', 8, '#17212c')
-                    paired(pdf, x+14, y+7, data['choices'][label])
+                    text(pdf, x+2.4, y+17, label, 'Latin', 7.7, '#17212c')
+                    paired(pdf, x+15.2, y+7.5, data['choices'][label], 8)
                 continue
         if n == 9 and page_no == 12:
             row += 3
@@ -156,7 +176,7 @@ def draw_page(pdf, rendered, clips, parts, photos, page_no, scale, gaps):
         if 'original' not in item:
             draw_crop(pdf, rendered, clip, None)
         else:
-            gap = draw_item(pdf, part, item, x, y+6, scale)
+            gap = draw_item(pdf, part, item, x, y, scale)
             if gap is not None:
                 gaps.append(gap)
 
@@ -215,6 +235,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('set_number', type=int, choices=range(1, 11))
     parser.add_argument('--output-dir', type=Path, default=Path('output'))
+    parser.add_argument('--problem-only', action='store_true')
     args = parser.parse_args()
     n, out = args.set_number, args.output_dir
     tag = f'제{n:02}회'
@@ -230,13 +251,14 @@ def main():
     problem = out/(stem+'문제지.pdf')
     with pdfium.PdfDocument(doc['source']) as rendered:
         gap = write_problem(doc, source, rendered, sizes, photos, problem)
-    keys = [''.join(item['answer'] for item in parts[p]['items']) for p in PART_ORDER]
-    scripts = [[line['hanzi'] for line in item['stem']]
-               for p in PART_ORDER[:4] for item in parts[p]['items']]
-    examples = [[line['hanzi'] for line in parts[p]['example']['stem']] for p in PART_ORDER[:4]]
-    write_answer(out, stem, n, *sizes, keys, scripts, examples)
     preview(problem, previews, tag+'_문제지', PLAY+str(n))
-    preview(out/(stem+'정답및해설.pdf'), previews, tag+'_정답및해설')
+    if not args.problem_only:
+        keys = [''.join(item['answer'] for item in parts[p]['items']) for p in PART_ORDER]
+        scripts = [[line['hanzi'] for line in item['stem']]
+                   for p in PART_ORDER[:4] for item in parts[p]['items']]
+        examples = [[line['hanzi'] for line in parts[p]['example']['stem']] for p in PART_ORDER[:4]]
+        write_answer(out, stem, n, *sizes, keys, scripts, examples)
+        preview(out/(stem+'정답및해설.pdf'), previews, tag+'_정답및해설')
     print(f'{tag}: {problem.stat().st_size:,} B')
     if gap is not None:
         print(f'Minimum A–C gap: {gap:.2f} pt')
