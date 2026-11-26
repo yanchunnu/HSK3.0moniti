@@ -10,7 +10,8 @@ import pymupdf as fitz
 import zxingcpp
 
 from check_option_gaps4 import measure
-from source4 import compact, parse
+from source4 import compact
+from content_model4 import load
 
 def extracted(path,tool,layout=False):
     args=[tool,'-enc','UTF-8',*(['-layout'] if layout else []),'-','-']
@@ -19,7 +20,7 @@ def extracted(path,tool,layout=False):
 def verify(level,number,tool):
     stem=Path('output')/f'HSK3.0_{level}급_제{number:02}회_'
     question,answer=(stem.with_name(stem.name+kind+'.pdf') for kind in ('문제지','정답및해설'))
-    _,keys,transcripts,asks,listen,words,fill,reading,sentences,hints,essay,writing,oral,_=parse(number)
+    _,keys,transcripts,asks,listen,words,fill,reading,sentences,hints,essay,writing,oral,_=load(number)
     for path in (question,answer):
         assert path.stat().st_size<=5_000_000
         text=extracted(path,tool)

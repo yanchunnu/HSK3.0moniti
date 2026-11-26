@@ -13,7 +13,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 
 from booklet import Layout, PARTS
-from source4 import parse
+from content_model4 import load
 
 EX = json.loads(Path(__file__).with_name('例01.json').read_text(encoding='utf-8-sig'))
 OPTION_GAP = 14
@@ -36,6 +36,20 @@ def wrap(value, limit):
         assert stop > 0, value
         yield value[:stop]
         value = value[stop:]
+
+def page_ranges(heights, capacity, first_extra=0):
+    best = {len(heights): (0, 0, [])}
+    for start in reversed(range(len(heights))):
+        available = capacity - (first_extra if start == 0 else 0)
+        candidates = []
+        for end in range(start+1, len(heights)+1):
+            spare = available - sum(heights[start:end])
+            if spare >= 0 and end in best:
+                pages, cost, tail = best[end]
+                candidates.append((pages+1, cost+spare**2, [(start,end), *tail]))
+        if candidates:
+            best[start] = min(candidates)
+    return best[0][2]
 
 class Exam(Layout):
     def paragraph(self, y, value, x=36, step=15, right=RIGHT):
@@ -165,7 +179,7 @@ def question_booklet(level,number,data,path):
         gap=min(19,(501-y-34*(last-first+1))/(last-first+1))
         spacing=max(5,gap-(7.5 if first>=21 else 0))
         option_step=17
-        if number != 1:
+        if number != 1 or first == 1:
             options = sum(l.option_height(listen[n]) for n in range(first,last+1))
             group_titles = 15*sum(scopes.get(n,n)>n for n in range(first,last+1))
             if y+options+group_titles+4*(last-first+1)>507:
@@ -228,18 +242,7 @@ def question_booklet(level,number,data,path):
         example_height = (15*sum(1 for _ in wrap('例：'+ex['passage'],RIGHT-36))+
                           15*sum(1 for _ in wrap('★ '+ex['question'],RIGHT-58))+
                           l.option_height(ex['options'],step=15)+11)
-        best = {len(reading): (0,0,[])}
-        for start in reversed(range(len(reading))):
-            available = 509-126-(example_height if start==0 else 0)
-            candidates = []
-            for end in range(start+1,len(reading)+1):
-                spare = available-sum(heights[start:end])
-                if spare>=0 and end in best:
-                    pages,cost,tail = best[end]
-                    candidates.append((pages+1,cost+spare**2,[(start,end),*tail]))
-            if candidates:
-                best[start] = min(candidates)
-        ranges = best[0][2]
+        ranges = page_ranges(heights,509-126,example_height)
     for start,end in ranges:
         l.begin('',PARTS[1],(43,57),continued=bool(start))
         t(33,111,'阅读短文，选出正确答案。')
@@ -368,14 +371,37 @@ def answer_booklet(level,number,data,path):
         y=l.paragraph(y,oral[n][1],x=58,step=13)+13
     assert y<516,y
     l.end()
-    for first,last,part,example in [(1,4,0,'l1'),(5,7,0,None),(8,11,0,'l1b'),(12,14,0,None),
-                                     (15,17,1,'l2'),(18,20,1,None),(21,24,1,'l2b'),
-                                     (25,28,1,None),(29,32,1,None)]:
+    def line_height(value):
+        return 15*sum(1 for _ in wrap(value,RIGHT-58))
+
+    examples = {1:'l1',8:'l1b',15:'l2',21:'l2b'}
+    pages = [(1,4,0),(5,7,0),(8,11,0),(12,14,0),(15,17,1),(18,20,1),
+             (21,24,1),(25,28,1),(29,32,1)]
+    if number != 1:
+        pages = []
+        for part, low, high in [(0,1,14),(1,15,32)]:
+            starts = [n for n in sorted(scopes) if low<=n<=high]
+            heights = []
+            for n in starts:
+                end = scopes[n]
+                height = sum(line_height(line) for line in transcripts[n])
+                height += sum(line_height(questions[m])+11 for m in range(n,end+1))
+                if end>n:
+                    height += 21
+                if n in examples:
+                    sample = EX[examples[n]]
+                    height += 12+sum(line_height(line) for line in sample['lines'])
+                    if 'second' in sample:
+                        height += 3+line_height(sample['second'])
+                heights.append(height)
+            pages.extend((starts[a],scopes[starts[b-1]],part)
+                         for a,b in page_ranges(heights,509-117))
+    for first,last,part in pages:
         heading('听力原文',PARTS[part]+('（续）' if first not in (1,15) else ''))
         y=117
-        if example:
-            y=l.example_listening(y,EX[example],False)
         for n in range(first,last+1):
+            if n in examples:
+                y=l.example_listening(y,EX[examples[n]],False)
             if n in transcripts:
                 lines=transcripts[n]
                 if scopes[n]>n:
@@ -394,7 +420,7 @@ def answer_booklet(level,number,data,path):
     l.save(path)
 
 def build(level,number):
-    data=parse(number)
+    data=load(number)
     out=Path('output')
     preview=out/'preview'
     preview.mkdir(parents=True,exist_ok=True)

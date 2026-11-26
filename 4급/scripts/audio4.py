@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from audio import decode, encode, normal, recognize, recognizer, synthesize, trim, RATE
-from source4 import parse
+from content_model4 import load
 
 EX = json.loads(Path(__file__).with_name('例01.json').read_text(encoding='utf-8-sig'))
 DIGITS = '零一二三四五六七八九'
@@ -91,7 +91,7 @@ def speaking_events(oral):
     return [*events,('f','口语考试结束。',1.4)]
 
 def build(level, number, model):
-    data=parse(number)
+    data=load(number)
     intro, parts=listening_events(level,number,data[2],data[3],data[-1])
     speaking=speaking_events(data[-2])
     transition=[('f','听力考试结束。下面进行口语考试。',2.0)]
