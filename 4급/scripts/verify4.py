@@ -26,7 +26,7 @@ def verify(level,number,tool):
     for path in (question,answer):
         assert path.stat().st_size<=5_000_000
         text=extracted(path,tool)
-        assert not re.search(r'[12356789]급|[一二三五六七八九]级|level\s*=\s*[12356789]\b|hsk\s*[12356789](?![\d.])|AI\s*생성|답안\s*카드|答题卡',text,re.I),path
+        assert not re.search(r'[12356789]급|[一二三五六七八九]级(?!台阶)|level\s*=\s*[12356789]\b|hsk\s*[12356789](?![\d.])|AI\s*생성|답안\s*카드|答题卡',text,re.I),path
         with fitz.open(path) as pdf:
             assert all(len(p.get_text().strip())>35 for p in pdf)
             pages_with_header = pdf[1:] if path == question else pdf

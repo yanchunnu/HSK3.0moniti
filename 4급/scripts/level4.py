@@ -12,7 +12,7 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 
-from booklet import Layout, PARTS
+from booklet import CELL_WIDTH, Layout, PARTS
 from content_model4 import load
 
 EX = json.loads(Path(__file__).with_name('例01.json').read_text(encoding='utf-8-sig'))
@@ -185,6 +185,9 @@ def question_booklet(level,number,data,path):
             if y+options+group_titles+4*(last-first+1)>507:
                 option_step=15
                 options = sum(l.option_height(listen[n],step=option_step) for n in range(first,last+1))
+            if first >= 21 and y+options+group_titles+4*(last-first+1)>507:
+                option_step=14
+                options = sum(l.option_height(listen[n],step=option_step) for n in range(first,last+1))
             spacing = max(4,min(spacing,(507-y-options-group_titles)/(last-first+1)))
         for n in range(first,last+1):
             if n in scopes:
@@ -299,8 +302,8 @@ def question_booklet(level,number,data,path):
     y=l.paragraph(y+3,EX['w2'][1])+18
     y=l.numbered(70,y,essay)+8
     for row in range(11):
-        for col in range(20):
-            l.box(39+15.2*col,y+17*row,15.2,15)
+        for col in range(17):
+            l.box(39+CELL_WIDTH*col,y+CELL_WIDTH*row,CELL_WIDTH,CELL_WIDTH)
     l.end()
     l.begin('口语','考试说明')
     t(33,128,'口语考试分三部分，共五题。')
